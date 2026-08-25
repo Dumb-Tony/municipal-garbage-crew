@@ -39,8 +39,8 @@
   ];
 
   const trafficTemplate = [
-    { x: 80, y: 292, vx: 82, color: "#a64f3f" },
-    { x: 860, y: 348, vx: -68, color: "#4f7193" }
+    { x: 430, y: 270, vx: 72, color: "#a64f3f" },
+    { x: 820, y: 340, vx: -62, color: "#4f7193" }
   ];
 
   function resetGame() {
@@ -54,6 +54,7 @@
       complaints: 0,
       spills: 0,
       cleanedSpills: 0,
+      handlingDrops: 0,
       damage: 0,
       badLoads: 0,
       collected: 0,
@@ -69,7 +70,7 @@
       spillZones: [],
       phaseBeforePause: "DRIVE",
       shake: 0,
-      truck: { x: 112, y: 330, angle: 0, speed: 0, stun: 0, collisionCooldown: 0 },
+      truck: { x: 112, y: 305, angle: 0, speed: 0, stun: 0, collisionCooldown: 0 },
       stops: stopsTemplate.map(s => ({ ...s, state: "waiting", revealed: false, wobble: randomSeeded(s.id) * 6 })),
       traffic: trafficTemplate.map(t => ({ ...t }))
     };
@@ -190,7 +191,7 @@
     ui.decision.classList.add("hidden");
     game.phase = "LOAD";
     stop.state = "loading";
-    game.loading = { stop, t: 0 };
+    game.loading = { stop, progress: 0, balance: (random() - .5) * .2, drift: (random() - .5) * .5, driftTimer: .7, drops: 0 };
     game.truck.speed = 0;
     beep(150, .14, "square");
   }
@@ -201,7 +202,7 @@
     game.loose += stop.weight;
     game.collected += 1;
     game.score += 120;
-    recordEvent("stop_collected", { stopId: stop.id, weight: stop.weight, contaminated: stop.contaminated });
+    recordEvent("stop_collected", { stopId: stop.id, weight: stop.weight, contaminated: stop.contaminated, handlingDrops: game.loading.drops });
     if (stop.contaminated) {
       game.badLoads += 1;
       game.complaints += 1;
@@ -301,7 +302,7 @@
       ["Compactor operation", compactions * 25], ["Spill recovery", game.cleanedSpills * 40],
       ["Time remaining", Math.floor(game.time) * 2], ["Incorrect tags", wrongTags * -60],
       ["Contaminated loads", game.badLoads * -90], ["Missed stops", missed * -80],
-      ["Spills created", game.spills * -70], ["Truck damage", game.damage * -45]
+      ["Handling slips", game.handlingDrops * -20], ["Spills created", game.spills * -70], ["Truck damage", game.damage * -45]
     ];
     game.score = Math.max(0, scoreLines.reduce((sum, line) => sum + line[1], 0));
     game.phase = "RESULT";
@@ -314,7 +315,7 @@
     ui.resultStats.innerHTML = [
       ["Score", game.score], ["Collected", `${game.collected}/6`],
       ["Correct tags", game.stops.filter(s => s.state === "tagged" && s.contaminated).length],
-      ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
+      ["Handling slips", game.handlingDrops], ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
       ["Shift seed", game.seed], ["Events logged", game.events.length]
     ].map(([a, b]) => `<span><b>${a}</b><br>${b}</span>`).join("");
     ui.resultLedger.innerHTML = scoreLines.filter(line => line[1] !== 0).map(([label, value]) =>
@@ -336,13 +337,42 @@
     updateTraffic(dt);
     updateParticles(dt);
     if (game.phase === "LOAD") {
-      game.loading.t += dt / 1.05;
-      if (game.loading.t >= 1) finishLoad();
+      updateHandling(dt);
       return;
     }
     if (game.phase !== "DRIVE") return;
     updateTruck(dt);
     checkCollisions();
+  }
+
+  function updateHandling(dt) {
+    const load = game.loading;
+    if (!load) return;
+    load.driftTimer -= dt;
+    if (load.driftTimer <= 0) {
+      load.drift = (random() - .5) * 1.15;
+      load.driftTimer = .55 + random() * .65;
+    }
+    const control = (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0) - (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0);
+    load.balance += (load.drift + control * 1.75) * dt;
+    load.balance *= Math.pow(.985, dt * 60);
+    if (keys.has("Space")) {
+      const stability = Math.max(.18, 1 - Math.abs(load.balance) * .72);
+      load.progress = Math.min(1, load.progress + dt * .48 * stability);
+    }
+    if (Math.abs(load.balance) > 1.05) {
+      load.drops += 1;
+      game.handlingDrops += 1;
+      game.score -= 20;
+      load.progress = Math.max(0, load.progress - .18);
+      load.balance = -Math.sign(load.balance) * .24;
+      load.drift *= -.35;
+      game.shake = .32;
+      recordEvent("bin_slipped", { stopId: load.stop.id, progress: Number(load.progress.toFixed(2)) });
+      showMessage("Bin slipped—counter the sway with A/D and keep holding Space.", 1.7);
+      beep(105, .16, "sawtooth");
+    }
+    if (load.progress >= 1) finishLoad();
   }
 
   function updateTruck(dt) {
@@ -362,7 +392,7 @@
     if (Math.abs(t.speed) > 3) t.angle += steer * 1.85 * dt * Math.sign(t.speed) * Math.min(1, Math.abs(t.speed) / 40);
     const nx = t.x + Math.cos(t.angle) * t.speed * dt;
     const ny = t.y + Math.sin(t.angle) * t.speed * dt;
-    if (nx > 52 && nx < W - 52 && ny > 150 && ny < H - 90) { t.x = nx; t.y = ny; }
+    if (nx > 52 && nx < W - 52 && ny > 225 && ny < 375) { t.x = nx; t.y = ny; }
     else { t.speed *= -.18; game.shake = .16; }
   }
 
@@ -378,8 +408,8 @@
     const t = game.truck;
     if (t.collisionCooldown > 0) return;
     const obstacles = [
-      ...game.traffic.map(c => ({ x: c.x, y: c.y, r: 31, moving: true })),
-      { x: 455, y: 205, r: 34, moving: false }
+      ...game.traffic.map(c => ({ x: c.x, y: c.y, r: 10, moving: true })),
+      { x: 455, y: 205, r: 22, moving: false }
     ];
     for (const o of obstacles) {
       if (Math.hypot(t.x - o.x, t.y - o.y) < o.r + 24) {
@@ -454,9 +484,9 @@
       if (stop.state === "collected") continue;
       let x = stop.x, y = stop.y;
       if (stop.state === "loading" && game.loading) {
-        const p = Math.min(1, game.loading.t);
+        const p = Math.min(1, game.loading.progress);
         const lift = Math.sin(p * Math.PI) * 60;
-        x += (game.truck.x - stop.x) * p;
+        x += (game.truck.x - stop.x) * p + game.loading.balance * 24;
         y += (game.truck.y - stop.y) * p - lift;
       }
       ctx.save(); ctx.translate(x, y);
@@ -508,7 +538,7 @@
 
   function contextualPrompt() {
     if (game.phase === "COMPACT") return "COMPACTOR CYCLING — HOLD";
-    if (game.phase === "LOAD") return "LOADING BIN — HOLD";
+    if (game.phase === "LOAD") return "HOLD SPACE · A/D BALANCE THE BIN";
     if (game.phase !== "DRIVE") return "";
     const nearbySpill = nearestSpill();
     if (nearbySpill.spill && nearbySpill.distance <= 68) return Math.abs(game.truck.speed) > 18 ? "BRAKE TO CLEAN SPILL" : "X · CLEAN SPILL";
@@ -528,7 +558,17 @@
     if (game.compactorCooldown>0) { ctx.fillStyle="#f2b84b"; ctx.fillText(`COMPACTOR ${game.compactorCooldown.toFixed(1)}s`,530,65); }
     const prompt = contextualPrompt();
     if (prompt) { ctx.fillStyle="rgba(15,22,18,.88)"; ctx.fillRect(320,100,320,30); ctx.fillStyle="#f2b84b"; ctx.font="bold 12px Arial"; ctx.textAlign="center"; ctx.fillText(prompt,480,120); ctx.textAlign="left"; }
+    if (game.phase === "LOAD" && game.loading) drawHandlingMeter();
     if (game.messageTime>0) { ctx.fillStyle="rgba(15,22,18,.9)"; ctx.fillRect(195,530,570,42); ctx.fillStyle="#f0ead8"; ctx.font="bold 14px Arial"; ctx.textAlign="center"; ctx.fillText(game.message,480,556); ctx.textAlign="left"; }
+  }
+
+  function drawHandlingMeter() {
+    const load = game.loading;
+    ctx.fillStyle="rgba(15,22,18,.94)"; ctx.fillRect(285,468,390,52);
+    ctx.fillStyle="#f0ead8"; ctx.font="bold 10px Arial"; ctx.fillText("BIN BALANCE",300,485); ctx.fillText(`${Math.round(load.progress*100)}% LOADED`,568,485);
+    ctx.fillStyle="#3c4941"; ctx.fillRect(300,493,360,12);
+    ctx.fillStyle=Math.abs(load.balance)>.78?"#d8684f":"#87ad70"; ctx.fillRect(478 + load.balance*150,491,8,16);
+    ctx.fillStyle="#f2b84b"; ctx.fillRect(480,493,3,12);
   }
 
   function drawRouteArrow() {

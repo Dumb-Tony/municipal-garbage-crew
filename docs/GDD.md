@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.3.0
+**Status:** Active preproduction / browser slice 0.4.0
 **Last updated:** 2026-08-25  
 **Product direction:** 2–5 player cooperative 3D Unity/Steam game  
 **Current proof:** standalone 2D Canvas prototype, solo, no build step
@@ -212,11 +212,11 @@ Scoring has independent service, safety, cleanliness, compliance, and time dimen
 
 Test whether one route creates meaningful tension between safe handling, contamination judgment, capacity, positioning, and time—and whether mistakes remain legible and funny enough to invite a retry.
 
-### Included through 0.3.0
+### Included through 0.4.0
 
 - One-screen Maple Street route with six stops.
 - Top-down drivable rear-loader with momentum, steering, boundaries, and damage collisions.
-- Stop proximity and speed gating; animated bin-to-truck loading.
+- Stop proximity and speed gating; player-controlled bin loading that requires holding the lift and countering deterministic lateral sway.
 - Two contaminated loads: one obvious and one uncertain until a five-second closer inspection.
 - Loose and compacted capacity, compactor stop interlock, cooldown, and capacity pressure.
 - Two moving traffic cars and one blocked-curb obstacle.
@@ -224,6 +224,7 @@ Test whether one route creates meaningful tension between safe handling, contami
 - 180-second shift, next-action guidance, scoring, missed-stop/complaint consequences, itemized results, pause, restart, and minimal generated audio.
 - Deterministic shift seed, deterministic spill checks, and a structured event ledger covering route decisions and consequences.
 - Corrected front-facing truck silhouette with cab, windshield, headlights, and explicit forward marker.
+- Safe road-aligned spawn, road-only movement bounds, and lane-sensitive collision envelopes verified against the initial traffic positions.
 
 ### Explicitly deferred
 
@@ -239,7 +240,7 @@ The current implementation is intentionally one script for frictionless delivery
 
 ### Data and state architecture
 
-The authoritative shift state contains phase, route clock, score ledger, truck state/cargo, stops, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Definitions (stop templates, truck tuning, contamination rules) remain separate from runtime instances. The 0.3.0 prototype records major route events and presents an itemized final score; remaining live score mutations should move behind named commands/events (`InspectStop`, `CollectLoad`, `Compact`, `Collision`, `ResolveStop`) so replays, networking, analytics, and tests can observe the same decisions.
+The authoritative shift state contains phase, route clock, score ledger, truck state/cargo, stops, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Definitions (stop templates, truck tuning, contamination rules) remain separate from runtime instances. The 0.4.0 prototype records major route and handling events and presents an itemized final score; remaining live score mutations should move behind named commands/events (`InspectStop`, `CollectLoad`, `Compact`, `Collision`, `ResolveStop`) so replays, networking, analytics, and tests can observe the same decisions.
 
 Long-term persistence layers:
 
@@ -311,7 +312,7 @@ Exit criteria and task ordering are in `BUILD_PREP.md`.
 
 ## 20. Next implementation tasks
 
-1. Run five short playtests of 0.3.0; record completion rate, first collision, compactor use, decision errors, spill recovery, and whether players retry.
+1. Run five short playtests of 0.4.0; record completion rate, first intentional service, handling slips, first collision, compactor use, decision errors, spill recovery, and whether players retry.
 2. Move remaining score mutations into event reducers; the 0.3 report is auditable, but the reducer remains the replay-safe architecture target.
 3. Add keyboard remapping and gamepad input abstraction.
 4. Add a short animated cleanup state and limited cleanup-kit supply to deepen spill recovery.

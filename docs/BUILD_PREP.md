@@ -16,6 +16,8 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Spill recovery interaction | Mistake becomes new work, not only penalty | M | Event ledger |
 | Done | Ambiguous contamination inspection | Genuine time-versus-certainty decision | M | Event ledger |
 | Done | Pause/focus safety | Fair standalone play when focus changes | S | Current input |
+| Done | Hands-on bin handling | Hold-to-lift, counter-sway, slip recovery and penalty | M | Route loop |
+| Done | Safe route spawn/collision pass | No immediate traffic damage; road-constrained driving | S | Truck movement |
 | P0 | Remappable input/gamepad layer | Device-independent actions | M | Current input |
 | P0 | Five-person usability playtest | Evidence for M0 decision | S | Current slice |
 | P1 | On-foot loader greybox | Validate walk/grab/tilt/tip | L | Input abstraction |
@@ -98,6 +100,7 @@ One polished district, three job variants, 2–5 players, join/reconnect, comple
 | Inspect nearest stop | Space | Must be within 74 px and moving ≤22 px/s |
 | Check uncertain contents | Q or button | Inspection open on obscured load; costs five route seconds |
 | Collect | E or button | Inspection open; refuses if projected capacity >8 |
+| Lift and balance bin | Hold Space + A/D or Left/Right | Load phase; holding advances lift, steering keys counter lateral sway; excessive sway causes a recoverable slip |
 | Tag and leave | R or button | Inspection open; correct for contamination, complaint otherwise |
 | Compact | C | Drive phase, speed ≤18, loose load present, cooldown clear |
 | Clean spill | X | Within 68 px, speed ≤18; costs three seconds and recovers score |
@@ -209,6 +212,9 @@ Assembly definitions should separate pure simulation, Unity presentation, networ
 - [ ] Drive with both WASD and arrow controls.
 - [ ] Try Space while moving and far away; reason is shown.
 - [ ] Collect a valid stop; loading animation completes exactly once.
+- [ ] Release Space during loading; progress waits. Counter sway in both directions and complete the lift.
+- [ ] Allow the balance marker to escape the safe range; one slip and one penalty are recorded, then handling remains recoverable.
+- [ ] Start a fresh shift and remain stationary for five seconds; no spawn collision or damage occurs.
 - [ ] Correctly tag one contaminated stop.
 - [ ] Incorrectly collect one contaminated stop; complaint and score respond.
 - [ ] Fill near capacity; attempt over-capacity load; compact while stopped; retry successfully.
@@ -241,7 +247,7 @@ Assembly definitions should separate pure simulation, Unity presentation, networ
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (manual in 0.3.0)
+### Playtest telemetry (manual in 0.4.0)
 
 Record: shift seed, time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, event count, restart choice, and a one-sentence causal account of the worst mistake.
 

@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.3.0
+**Build:** 0.4.0
 **Tester:**  
 **Date / browser:**  
 
@@ -12,6 +12,7 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Seconds to first successfully resolved stop:
 - First visible confusion:
 - Compactor attempts / successes:
+- Bin handling slips / most difficult lift:
 - Contamination choices (stop and choice):
 - Collisions / spills:
 - Completion? Final time / score / complaints:

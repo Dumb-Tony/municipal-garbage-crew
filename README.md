@@ -8,7 +8,7 @@ A living design package and standalone browser vertical slice for a tactile, sys
 
 Open `prototype/index.html` in a modern desktop browser. No install, server, or build step is required.
 
-Drive with **WASD** or **arrow keys**. Stop beside a highlighted curb bin and press **Space** to inspect it. Press **E** to collect, **R** to tag and skip contaminated waste, and **Q** to examine uncertain contents. Press **C** to compact while stopped, **X** to clean a nearby spill, and **P** to pause. Press **M** to mute and **Enter** to restart after a shift.
+Drive with **WASD** or **arrow keys**. Stop beside a highlighted curb bin and press **Space** to inspect it. Press **E** to collect, **R** to tag and skip contaminated waste, and **Q** to examine uncertain contents. While loading, hold **Space** and counter the bin's sway with **A/D** or the arrow keys. Press **C** to compact while stopped, **X** to clean a nearby spill, and **P** to pause. Press **M** to mute and **Enter** to restart after a shift.
 
 ## Project map
 
@@ -19,7 +19,7 @@ Drive with **WASD** or **arrow keys**. Stop beside a highlighted curb bin and pr
 
 ## Current slice
 
-Version `0.3.0` implements a single-player, one-screen neighborhood route. It adds corrected truck orientation, contextual action guidance, an uncertain contamination inspection, recoverable spill cleanup, pause/focus safety, deterministic shift events, and an itemized score report to the existing six-stop driving, capacity, compaction, traffic, collision, and consequence loop.
+Version `0.4.0` implements a single-player, one-screen neighborhood route. Bin loading is now a hands-on balance interaction rather than an automatic animation. It also corrects the unsafe traffic-overlapping spawn, tightens driving to the roadway, improves collision geometry, and retains the corrected truck orientation, contextual guidance, uncertain inspection, spill recovery, pause safety, deterministic events, and itemized score report.
 
 ## Repository and publishing policy
 
