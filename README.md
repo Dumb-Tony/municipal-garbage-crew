@@ -19,7 +19,7 @@ Drive with **WASD** or **arrow keys**. Stop beside a highlighted curb bin and pr
 
 ## Current slice
 
-Version `0.4.0` implements a single-player, one-screen neighborhood route. Bin loading is now a hands-on balance interaction rather than an automatic animation. It also corrects the unsafe traffic-overlapping spawn, tightens driving to the roadway, improves collision geometry, and retains the corrected truck orientation, contextual guidance, uncertain inspection, spill recovery, pause safety, deterministic events, and itemized score report.
+Version `0.4.1` implements a single-player, one-screen neighborhood route. Bin loading is now a hands-on balance interaction rather than an automatic animation. It also corrects the unsafe traffic-overlapping spawn, tightens driving to the roadway, improves collision geometry, and retains the corrected truck orientation, contextual guidance, uncertain inspection, spill recovery, pause safety, deterministic events, and itemized score report. Versioned static asset URLs prevent GitHub Pages from mixing new markup with an older cached game script.
 
 ## Repository and publishing policy
 

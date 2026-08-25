@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.4.0
+**Status:** Active preproduction / browser slice 0.4.1
 **Last updated:** 2026-08-25  
 **Product direction:** 2–5 player cooperative 3D Unity/Steam game  
 **Current proof:** standalone 2D Canvas prototype, solo, no build step

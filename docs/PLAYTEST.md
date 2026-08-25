@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.4.0
+**Build:** 0.4.1
 **Tester:**  
 **Date / browser:**  
 
