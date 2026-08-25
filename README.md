@@ -2,7 +2,7 @@
 
 A living design package and standalone browser vertical slice for a tactile, systemic sanitation-route game.
 
-> **Play online:** The public GitHub Pages link is added here immediately after the repository is created and its account-owned URL is known.
+> **Play online:** [Launch Municipal Garbage Crew](https://dumb-tony.github.io/municipal-garbage-crew/)
 
 ## Play
 
