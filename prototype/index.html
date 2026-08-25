@@ -19,7 +19,7 @@
     </header>
 
     <section class="game-frame" aria-label="Playable garbage collection route">
-      <canvas id="game" width="960" height="600" tabindex="0" aria-label="Top-down driving game. Use WASD or arrow keys to drive, Space to inspect a bin, E to collect, R to tag contaminated waste, and C to compact."></canvas>
+      <canvas id="game" width="960" height="600" tabindex="0" aria-label="Top-down driving game. Use WASD or arrow keys to drive, Space to inspect a bin, E to collect, R to tag contaminated waste, Q to inspect uncertain waste, X to clean spills, and C to compact."></canvas>
       <div id="startPanel" class="overlay-card">
         <p class="stamp">FIRST ROUTE</p>
         <h2>Maple Street is waiting.</h2>
@@ -27,8 +27,8 @@
         <div class="control-grid" aria-label="Controls">
           <span><b>WASD / Arrows</b> Drive</span>
           <span><b>Space</b> Inspect stop</span>
-          <span><b>E / R</b> Collect / tag</span>
-          <span><b>C</b> Compact when stopped</span>
+          <span><b>E / R / Q</b> Collect / tag / check</span>
+          <span><b>C / X</b> Compact / clean spill</span>
         </div>
         <button id="startButton" type="button">Clock in</button>
       </div>
@@ -39,21 +39,29 @@
         <div class="decision-actions">
           <button id="collectButton" type="button"><kbd>E</kbd> Collect</button>
           <button id="tagButton" type="button"><kbd>R</kbd> Tag & leave</button>
+          <button id="inspectButton" class="secondary-action hidden" type="button"><kbd>Q</kbd> Check closer · 5s</button>
         </div>
+      </div>
+      <div id="pausePanel" class="overlay-card compact-card hidden" role="dialog" aria-live="polite">
+        <p class="stamp">TRUCK PARKED</p>
+        <h2>Shift paused</h2>
+        <p>The route clock and traffic are stopped.</p>
+        <button id="resumeButton" type="button">Resume shift</button>
       </div>
       <div id="resultPanel" class="overlay-card hidden" role="dialog" aria-live="polite">
         <p class="stamp">SHIFT REPORT</p>
         <h2 id="resultTitle">Route complete</h2>
         <p id="resultSummary"></p>
         <div id="resultStats" class="result-stats"></div>
+        <div id="resultLedger" class="result-ledger"></div>
         <button id="restartButton" type="button">Run route again</button>
       </div>
     </section>
 
     <footer class="footer-note">
-      <span>Prototype 0.2.0</span>
+      <span>Prototype 0.3.0</span>
       <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
-      <button id="muteButton" class="text-button" type="button" aria-pressed="false">Sound: on</button>
+      <div class="footer-actions"><button id="pauseButton" class="text-button" type="button">Pause</button><button id="muteButton" class="text-button" type="button" aria-pressed="false">Sound: on</button></div>
     </footer>
   </main>
   <script src="game.js" defer></script>

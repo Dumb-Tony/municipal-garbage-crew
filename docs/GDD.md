@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.2.0  
+**Status:** Active preproduction / browser slice 0.3.0
 **Last updated:** 2026-08-25  
 **Product direction:** 2–5 player cooperative 3D Unity/Steam game  
 **Current proof:** standalone 2D Canvas prototype, solo, no build step
@@ -212,17 +212,18 @@ Scoring has independent service, safety, cleanliness, compliance, and time dimen
 
 Test whether one route creates meaningful tension between safe handling, contamination judgment, capacity, positioning, and time—and whether mistakes remain legible and funny enough to invite a retry.
 
-### Included through 0.2.0
+### Included through 0.3.0
 
 - One-screen Maple Street route with six stops.
 - Top-down drivable rear-loader with momentum, steering, boundaries, and damage collisions.
 - Stop proximity and speed gating; animated bin-to-truck loading.
-- Two known contaminated loads with collect-versus-tag decisions.
+- Two contaminated loads: one obvious and one uncertain until a five-second closer inspection.
 - Loose and compacted capacity, compactor stop interlock, cooldown, and capacity pressure.
 - Two moving traffic cars and one blocked-curb obstacle.
-- Loose-load spill chance on collision, visible debris, damage and score penalties.
-- 150-second shift, route guidance, scoring, missed-stop/complaint consequences, results, restart, and minimal generated audio.
+- Loose-load spill chance on collision, persistent cleanup zones, time-cost recovery action, damage and score penalties.
+- 180-second shift, next-action guidance, scoring, missed-stop/complaint consequences, itemized results, pause, restart, and minimal generated audio.
 - Deterministic shift seed, deterministic spill checks, and a structured event ledger covering route decisions and consequences.
+- Corrected front-facing truck silhouette with cab, windshield, headlights, and explicit forward marker.
 
 ### Explicitly deferred
 
@@ -238,7 +239,7 @@ The current implementation is intentionally one script for frictionless delivery
 
 ### Data and state architecture
 
-The authoritative shift state contains phase, route clock, score ledger, truck state/cargo, stops, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Definitions (stop templates, truck tuning, contamination rules) remain separate from runtime instances. The 0.2.0 prototype records major route events; remaining score mutations should move behind named commands/events (`InspectStop`, `CollectLoad`, `Compact`, `Collision`, `ResolveStop`) so replays, networking, analytics, and tests can observe the same decisions.
+The authoritative shift state contains phase, route clock, score ledger, truck state/cargo, stops, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Definitions (stop templates, truck tuning, contamination rules) remain separate from runtime instances. The 0.3.0 prototype records major route events and presents an itemized final score; remaining live score mutations should move behind named commands/events (`InspectStop`, `CollectLoad`, `Compact`, `Collision`, `ResolveStop`) so replays, networking, analytics, and tests can observe the same decisions.
 
 Long-term persistence layers:
 
@@ -293,7 +294,7 @@ Exit criteria and task ordering are in `BUILD_PREP.md`.
 - Roles are stations/responsibilities, not locked classes.
 - Persistence records address relationships and consequences but offers repair paths.
 - Time is usually soft pressure; severe safety failures, not ordinary lateness, create hard stops.
-- Browser 0.1.0 uses drivable top-down truck rather than nodes to test positioning and collisions.
+- The browser slice uses a drivable top-down truck rather than nodes to test positioning and collisions.
 - Contamination is a readable choice in the first slice, not a hidden trivia test.
 - No build step or third-party assets for the first browser deliverable.
 
@@ -310,11 +311,10 @@ Exit criteria and task ordering are in `BUILD_PREP.md`.
 
 ## 20. Next implementation tasks
 
-1. Run five short playtests of 0.1.0; record completion rate, first collision, compactor use, decision errors, and whether players retry.
-2. Move all score mutations into event reducers and display an itemized, auditable result ledger.
-3. Replace binary contamination with one ambiguous inspection case plus an optional closer-look action that costs time.
-4. Add a recoverable spill-cleanup interaction rather than leaving spills as particles and a penalty.
-5. Add keyboard remapping/gamepad input abstraction and pause/focus behavior.
-6. Split simulation, input, renderer, audio, content, and UI modules; add rule tests.
-7. Build the M1 Unity handling sandbox: one avatar, one wheeled bin, one hopper, one bag, one curb.
-8. Schedule sanitation-worker interviews before locking handling, terminology, safety procedures, or consequence tone.
+1. Run five short playtests of 0.3.0; record completion rate, first collision, compactor use, decision errors, spill recovery, and whether players retry.
+2. Move remaining score mutations into event reducers; the 0.3 report is auditable, but the reducer remains the replay-safe architecture target.
+3. Add keyboard remapping and gamepad input abstraction.
+4. Add a short animated cleanup state and limited cleanup-kit supply to deepen spill recovery.
+5. Split simulation, input, renderer, audio, content, and UI modules; add rule tests.
+6. Build the M1 Unity handling sandbox: one avatar, one wheeled bin, one hopper, one bag, one curb.
+7. Schedule sanitation-worker interviews before locking handling, terminology, safety procedures, or consequence tone.

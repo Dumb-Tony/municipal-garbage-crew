@@ -9,9 +9,12 @@
     result: document.querySelector("#resultPanel"),
     decisionTitle: document.querySelector("#decisionTitle"),
     decisionText: document.querySelector("#decisionText"),
+    inspect: document.querySelector("#inspectButton"),
+    pause: document.querySelector("#pausePanel"),
     resultTitle: document.querySelector("#resultTitle"),
     resultSummary: document.querySelector("#resultSummary"),
     resultStats: document.querySelector("#resultStats"),
+    resultLedger: document.querySelector("#resultLedger"),
     status: document.querySelector("#statusText"),
     mute: document.querySelector("#muteButton")
   };
@@ -23,11 +26,12 @@
   let muted = false;
   let last = 0;
   let game;
+  const SHIFT_DURATION = 180;
   const SHIFT_SEED = 4040712;
 
   const stopsTemplate = [
     { id: 1, x: 188, y: 190, label: "12 Maple", kind: "Household", weight: 1.7, contaminated: false },
-    { id: 2, x: 350, y: 190, label: "18 Maple", kind: "Paint cans visible", weight: 1.1, contaminated: true },
+    { id: 2, x: 350, y: 190, label: "18 Maple", kind: "Sealed contractor bags", weight: 1.1, contaminated: true, ambiguous: true },
     { id: 3, x: 565, y: 190, label: "24 Maple", kind: "Heavy household", weight: 2.4, contaminated: false },
     { id: 4, x: 774, y: 405, label: "Corner Market", kind: "Bagged commercial", weight: 2.7, contaminated: false },
     { id: 5, x: 544, y: 405, label: "31 Maple", kind: "Loose electronics", weight: 1.4, contaminated: true },
@@ -45,10 +49,11 @@
       seed: SHIFT_SEED,
       rngState: SHIFT_SEED,
       events: [],
-      time: 150,
+      time: SHIFT_DURATION,
       score: 0,
       complaints: 0,
       spills: 0,
+      cleanedSpills: 0,
       damage: 0,
       badLoads: 0,
       collected: 0,
@@ -61,26 +66,31 @@
       activeStop: null,
       loading: null,
       particles: [],
+      spillZones: [],
+      phaseBeforePause: "DRIVE",
       shake: 0,
       truck: { x: 112, y: 330, angle: 0, speed: 0, stun: 0, collisionCooldown: 0 },
-      stops: stopsTemplate.map(s => ({ ...s, state: "waiting", wobble: Math.random() * 6 })),
+      stops: stopsTemplate.map(s => ({ ...s, state: "waiting", revealed: false, wobble: randomSeeded(s.id) * 6 })),
       traffic: trafficTemplate.map(t => ({ ...t }))
     };
     ui.start.classList.remove("hidden");
     ui.decision.classList.add("hidden");
     ui.result.classList.add("hidden");
+    ui.pause.classList.add("hidden");
     setStatus("Click “Clock in” to begin.");
   }
 
   function usedCapacity() { return game.loose + game.compacted; }
   function unresolved() { return game.stops.filter(s => s.state === "waiting").length; }
+  function uncleanedSpills() { return game.spillZones.filter(s => !s.cleaned).length; }
+  function randomSeeded(offset) { return ((Math.imul(1103515245, SHIFT_SEED + offset) + 12345) >>> 0) / 4294967296; }
   function setStatus(text) { ui.status.textContent = text; }
   function random() {
     game.rngState = (Math.imul(1664525, game.rngState) + 1013904223) >>> 0;
     return game.rngState / 4294967296;
   }
   function recordEvent(type, details = {}) {
-    game.events.push({ type, at: Number((150 - game.time).toFixed(2)), ...details });
+    game.events.push({ type, at: Number((SHIFT_DURATION - game.time).toFixed(2)), ...details });
   }
 
   function beep(frequency = 220, duration = .08, type = "square", volume = .035) {
@@ -136,13 +146,33 @@
     game.phase = "INSPECT";
     game.activeStop = stop;
     recordEvent("stop_inspected", { stopId: stop.id });
-    ui.decisionTitle.textContent = `${stop.label} · ${stop.kind}`;
-    ui.decisionText.textContent = stop.contaminated
-      ? "The load contains prohibited material. Collecting is faster, but risks a contamination complaint and a costly spill."
-      : "Contents look acceptable. Load it, or leave it behind and take a missed-pickup complaint.";
+    renderDecision(stop);
     ui.decision.classList.remove("hidden");
     setStatus("Choose: E to collect or R to tag and leave.");
     beep(330, .08, "sine");
+  }
+
+  function renderDecision(stop) {
+    ui.decisionTitle.textContent = `${stop.label} · ${stop.kind}`;
+    const uncertain = stop.ambiguous && !stop.revealed;
+    ui.decisionText.textContent = uncertain
+      ? "The bags are sealed and unusually rigid. You can make the call now, or spend five seconds checking beneath the top bag."
+      : stop.contaminated
+        ? "Prohibited material is visible. Collecting saves the stop but causes a contamination violation."
+        : "Contents look acceptable. Load it, or leave it behind and take a missed-pickup complaint.";
+    ui.inspect.classList.toggle("hidden", !uncertain);
+  }
+
+  function inspectCloser() {
+    const stop = game.activeStop;
+    if (game.phase !== "INSPECT" || !stop?.ambiguous || stop.revealed) return;
+    stop.revealed = true;
+    game.time = Math.max(0, game.time - 5);
+    recordEvent("contents_revealed", { stopId: stop.id, timeCost: 5 });
+    renderDecision(stop);
+    showMessage("Paint cans found under the top bag. Five seconds used.");
+    beep(410, .1, "triangle");
+    if (game.time <= 0) finishGame(true);
   }
 
   function collectActive() {
@@ -229,17 +259,51 @@
   }
 
   function checkRouteEnd() {
-    if (unresolved() === 0) finishGame(false);
+    if (unresolved() === 0 && uncleanedSpills() === 0) finishGame(false);
+    else if (unresolved() === 0) showMessage(`Stops cleared. Clean ${uncleanedSpills()} spill${uncleanedSpills() === 1 ? "" : "s"} with X to close the route.`);
+  }
+
+  function nearestSpill() {
+    let best = null, bestDistance = Infinity;
+    for (const spill of game.spillZones) {
+      if (spill.cleaned) continue;
+      const distance = Math.hypot(spill.x - game.truck.x, spill.y - game.truck.y);
+      if (distance < bestDistance) { best = spill; bestDistance = distance; }
+    }
+    return { spill: best, distance: bestDistance };
+  }
+
+  function cleanSpill() {
+    if (game.phase !== "DRIVE") return;
+    if (Math.abs(game.truck.speed) > 18) { showMessage("Stop beside the spill before deploying the cleanup kit."); return; }
+    const { spill, distance } = nearestSpill();
+    if (!spill || distance > 68) { showMessage("No spill within cleanup range."); return; }
+    spill.cleaned = true;
+    game.cleanedSpills += 1;
+    game.time = Math.max(0, game.time - 3);
+    game.score += 40;
+    recordEvent("spill_cleaned", { timeCost: 3 });
+    showMessage("Street cleared with the spill kit. +40 · 3 seconds used");
+    beep(470, .12, "sine");
+    if (game.time <= 0) finishGame(true); else checkRouteEnd();
   }
 
   function finishGame(timedOut) {
     if (game.phase === "RESULT") return;
     const missed = unresolved();
-    game.complaints += missed;
-    game.score -= missed * 80;
-    game.score += Math.floor(game.time) * 2;
-    game.score -= game.spills * 70 + game.damage * 45;
-    game.score = Math.max(0, Math.round(game.score));
+    const dirtyStreet = uncleanedSpills();
+    game.complaints += missed + dirtyStreet;
+    const correctTags = game.stops.filter(s => s.state === "tagged" && s.contaminated).length;
+    const wrongTags = game.stops.filter(s => s.state === "tagged" && !s.contaminated).length;
+    const compactions = game.events.filter(e => e.type === "compactor_cycled").length;
+    const scoreLines = [
+      ["Collected service", game.collected * 120], ["Correct contamination tags", correctTags * 70],
+      ["Compactor operation", compactions * 25], ["Spill recovery", game.cleanedSpills * 40],
+      ["Time remaining", Math.floor(game.time) * 2], ["Incorrect tags", wrongTags * -60],
+      ["Contaminated loads", game.badLoads * -90], ["Missed stops", missed * -80],
+      ["Spills created", game.spills * -70], ["Truck damage", game.damage * -45]
+    ];
+    game.score = Math.max(0, scoreLines.reduce((sum, line) => sum + line[1], 0));
     game.phase = "RESULT";
     recordEvent("shift_finished", { timedOut, score: game.score, complaints: game.complaints });
     ui.decision.classList.add("hidden");
@@ -250,16 +314,19 @@
     ui.resultStats.innerHTML = [
       ["Score", game.score], ["Collected", `${game.collected}/6`],
       ["Correct tags", game.stops.filter(s => s.state === "tagged" && s.contaminated).length],
-      ["Spills", game.spills], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
+      ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
       ["Shift seed", game.seed], ["Events logged", game.events.length]
     ].map(([a, b]) => `<span><b>${a}</b><br>${b}</span>`).join("");
+    ui.resultLedger.innerHTML = scoreLines.filter(line => line[1] !== 0).map(([label, value]) =>
+      `<div class="${value < 0 ? "negative" : "positive"}"><span>${label}</span><b>${value > 0 ? "+" : ""}${value}</b></div>`
+    ).join("");
     ui.result.classList.remove("hidden");
     setStatus("Shift complete. Press Enter to run it again.");
     beep(game.complaints ? 170 : 560, .35, "triangle", .06);
   }
 
   function update(dt) {
-    if (!game || game.phase === "READY" || game.phase === "RESULT") return;
+    if (!game || game.phase === "READY" || game.phase === "RESULT" || game.phase === "PAUSED") return;
     game.time = Math.max(0, game.time - dt);
     game.messageTime = Math.max(0, game.messageTime - dt);
     game.compactorCooldown = Math.max(0, game.compactorCooldown - dt);
@@ -321,7 +388,7 @@
         t.speed *= -.25;
         game.damage += 1;
         recordEvent("collision", { movingTraffic: o.moving, looseLoad: Number(game.loose.toFixed(2)) });
-        game.score -= 25;
+        game.score -= 45;
         game.shake = .45;
         showMessage(o.moving ? "Traffic collision! Truck damage recorded." : "Blocked curb clipped. Back out carefully.");
         beep(72, .3, "sawtooth", .07);
@@ -334,13 +401,15 @@
   function createSpill() {
     game.spills += 1;
     game.loose = Math.max(0, game.loose - .45);
+    game.spillZones.push({ x: game.truck.x, y: game.truck.y, cleaned: false });
+    game.score -= 70;
     recordEvent("spill_created", { remainingLoose: Number(game.loose.toFixed(2)) });
     for (let i = 0; i < 10; i++) game.particles.push({
       x: game.truck.x, y: game.truck.y,
       vx: (Math.random() - .5) * 75, vy: (Math.random() - .5) * 75,
       life: 3 + Math.random() * 2, size: 3 + Math.random() * 5
     });
-    showMessage("Loose load spilled into the street. Cleanup penalty applied.");
+    showMessage("Loose load spilled. Stop nearby and press X to deploy the cleanup kit.");
   }
 
   function updateParticles(dt) {
@@ -357,6 +426,7 @@
     if (game) {
       drawStops();
       drawObstacles();
+      drawSpills();
       drawParticles();
       drawTruck();
       drawHUD();
@@ -396,6 +466,7 @@
       ctx.fillRect(-10, -13, 20, 26); ctx.fillStyle = "#18251e"; ctx.fillRect(-13, -16, 26, 5);
       ctx.fillStyle = "#101613"; ctx.beginPath(); ctx.arc(-8, 15, 3, 0, Math.PI*2); ctx.arc(8,15,3,0,Math.PI*2); ctx.fill();
       if (stop.state === "tagged") { ctx.fillStyle = "#f4d46a"; ctx.fillRect(10,-9,7,12); }
+      ctx.fillStyle = near ? "#17211c" : "rgba(23,33,28,.76)"; ctx.font = "bold 10px Arial"; ctx.textAlign = "center"; ctx.fillText(stop.label.toUpperCase(), 0, -24); ctx.textAlign = "left";
       ctx.restore();
     }
   }
@@ -413,12 +484,39 @@
   function drawTruck() {
     const t = game.truck; ctx.save(); ctx.translate(t.x,t.y); ctx.rotate(t.angle);
     ctx.fillStyle="#111"; ctx.fillRect(-32,-26,15,7); ctx.fillRect(15,-26,15,7); ctx.fillRect(-32,19,15,7); ctx.fillRect(15,19,15,7);
-    ctx.fillStyle="#d9e0d4"; ctx.fillRect(-36,-21,31,42); ctx.fillStyle="#86aa73"; ctx.fillRect(-5,-23,48,46); ctx.fillStyle="#27332d"; ctx.fillRect(-31,-16,17,32); ctx.fillStyle="#f2b84b"; ctx.fillRect(34,-20,6,40);
-    ctx.strokeStyle="#17211c"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(8,-17); ctx.lineTo(8,17); ctx.moveTo(22,-17); ctx.lineTo(22,17); ctx.stroke();
+    ctx.fillStyle="#86aa73"; ctx.fillRect(-40,-23,50,46); ctx.fillStyle="#d9e0d4"; ctx.fillRect(10,-21,32,42);
+    ctx.fillStyle="#27332d"; ctx.fillRect(22,-16,15,32); ctx.fillStyle="#a8c6ca"; ctx.fillRect(31,-14,7,28);
+    ctx.fillStyle="#f2b84b"; ctx.fillRect(-40,-20,6,40); ctx.fillStyle="#fff1b0"; ctx.fillRect(39,-16,4,8); ctx.fillRect(39,8,4,8);
+    ctx.strokeStyle="#17211c"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-25,-17); ctx.lineTo(-25,17); ctx.moveTo(-10,-17); ctx.lineTo(-10,17); ctx.stroke();
+    ctx.fillStyle="#f2b84b"; ctx.beginPath(); ctx.moveTo(50,0); ctx.lineTo(44,-6); ctx.lineTo(44,6); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
 
   function drawParticles() { ctx.fillStyle="#352f25"; for (const p of game.particles) ctx.fillRect(p.x,p.y,p.size,p.size); }
+
+  function drawSpills() {
+    for (const spill of game.spillZones) {
+      if (spill.cleaned) continue;
+      ctx.save(); ctx.translate(spill.x, spill.y);
+      ctx.fillStyle="rgba(49,38,29,.78)";
+      [[-18,-8,8],[0,3,10],[15,-6,6],[-5,-15,5],[20,10,4]].forEach(([x,y,r]) => { ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); });
+      const near = Math.hypot(spill.x-game.truck.x, spill.y-game.truck.y) < 68;
+      ctx.strokeStyle=near?"#f2b84b":"#d8684f"; ctx.lineWidth=3; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.arc(0,0,31,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle="#17211c"; ctx.font="bold 10px Arial"; ctx.textAlign="center"; ctx.fillText(near?"X · CLEAN":"SPILL",0,-39); ctx.textAlign="left"; ctx.restore();
+    }
+  }
+
+  function contextualPrompt() {
+    if (game.phase === "COMPACT") return "COMPACTOR CYCLING — HOLD";
+    if (game.phase === "LOAD") return "LOADING BIN — HOLD";
+    if (game.phase !== "DRIVE") return "";
+    const nearbySpill = nearestSpill();
+    if (nearbySpill.spill && nearbySpill.distance <= 68) return Math.abs(game.truck.speed) > 18 ? "BRAKE TO CLEAN SPILL" : "X · CLEAN SPILL";
+    const nearbyStop = nearestStop();
+    if (nearbyStop.stop && nearbyStop.distance <= 74) return Math.abs(game.truck.speed) > 22 ? "BRAKE TO SERVICE STOP" : `SPACE · INSPECT ${nearbyStop.stop.label.toUpperCase()}`;
+    if (game.loose >= 3 && Math.abs(game.truck.speed) <= 18) return "C · COMPACT LOOSE LOAD";
+    return "WASD / ARROWS · DRIVE   P · PAUSE";
+  }
 
   function drawHUD() {
     ctx.fillStyle="rgba(15,22,18,.91)"; ctx.fillRect(18,16,924,74);
@@ -428,19 +526,42 @@
     ctx.fillStyle="#3c4941"; ctx.fillRect(316,52,340,18); ctx.fillStyle=usedCapacity()>6.8?"#d8684f":"#87ad70"; ctx.fillRect(316,52,340*Math.min(1,usedCapacity()/8),18);
     ctx.fillStyle="#f0ead8"; ctx.font="bold 11px Arial"; ctx.fillText(`${usedCapacity().toFixed(1)} / 8  ·  loose ${game.loose.toFixed(1)}`,326,65);
     if (game.compactorCooldown>0) { ctx.fillStyle="#f2b84b"; ctx.fillText(`COMPACTOR ${game.compactorCooldown.toFixed(1)}s`,530,65); }
+    const prompt = contextualPrompt();
+    if (prompt) { ctx.fillStyle="rgba(15,22,18,.88)"; ctx.fillRect(320,100,320,30); ctx.fillStyle="#f2b84b"; ctx.font="bold 12px Arial"; ctx.textAlign="center"; ctx.fillText(prompt,480,120); ctx.textAlign="left"; }
     if (game.messageTime>0) { ctx.fillStyle="rgba(15,22,18,.9)"; ctx.fillRect(195,530,570,42); ctx.fillStyle="#f0ead8"; ctx.font="bold 14px Arial"; ctx.textAlign="center"; ctx.fillText(game.message,480,556); ctx.textAlign="left"; }
   }
 
   function drawRouteArrow() {
-    const { stop } = nearestStop(); if (!stop) return;
-    const angle = Math.atan2(stop.y-game.truck.y, stop.x-game.truck.x);
+    const { stop } = nearestStop();
+    const { spill } = nearestSpill();
+    const target = stop || spill;
+    if (!target) return;
+    const angle = Math.atan2(target.y-game.truck.y, target.x-game.truck.x);
     ctx.save(); ctx.translate(900,118); ctx.rotate(angle); ctx.fillStyle="#f2b84b"; ctx.beginPath(); ctx.moveTo(20,0); ctx.lineTo(-12,-10); ctx.lineTo(-5,0); ctx.lineTo(-12,10); ctx.closePath(); ctx.fill(); ctx.restore();
-    ctx.fillStyle="#17211c"; ctx.font="bold 11px Arial"; ctx.textAlign="right"; ctx.fillText(stop.label.toUpperCase(),864,122); ctx.textAlign="left";
+    ctx.fillStyle="#17211c"; ctx.font="bold 11px Arial"; ctx.textAlign="right"; ctx.fillText(stop ? stop.label.toUpperCase() : "SPILL CLEANUP",864,122); ctx.textAlign="left";
   }
 
   function frame(now) {
     const dt = Math.min(.033, (now-last)/1000 || 0); last=now;
     update(dt); draw(); requestAnimationFrame(frame);
+  }
+
+  function togglePause(forcePause = false) {
+    if (!game || game.phase === "READY" || game.phase === "RESULT") return;
+    if (game.phase === "PAUSED" && !forcePause) {
+      game.phase = game.phaseBeforePause;
+      ui.pause.classList.add("hidden");
+      setStatus("Shift resumed.");
+      canvas.focus();
+      return;
+    }
+    if (game.phase !== "PAUSED") {
+      game.phaseBeforePause = game.phase;
+      game.phase = "PAUSED";
+      keys.clear();
+      ui.pause.classList.remove("hidden");
+      setStatus("Shift paused. Press P or Resume.");
+    }
   }
 
   addEventListener("keydown", event => {
@@ -450,15 +571,22 @@
     if (event.code === "Space") inspectStop();
     if (event.code === "KeyE") collectActive();
     if (event.code === "KeyR") tagActive();
+    if (event.code === "KeyQ") inspectCloser();
     if (event.code === "KeyC") compact();
+    if (event.code === "KeyX") cleanSpill();
+    if (event.code === "KeyP") togglePause();
     if (event.code === "Enter" && game.phase === "RESULT") { resetGame(); startGame(); }
     if (event.code === "KeyM") toggleMute();
   });
   addEventListener("keyup", event => keys.delete(event.code));
-  addEventListener("blur", () => keys.clear());
+  addEventListener("blur", () => { keys.clear(); if (game && !["READY","RESULT","PAUSED"].includes(game.phase)) togglePause(true); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden && game && !["READY","RESULT","PAUSED"].includes(game.phase)) togglePause(true); });
   document.querySelector("#startButton").addEventListener("click", startGame);
   document.querySelector("#collectButton").addEventListener("click", collectActive);
   document.querySelector("#tagButton").addEventListener("click", tagActive);
+  document.querySelector("#inspectButton").addEventListener("click", inspectCloser);
+  document.querySelector("#pauseButton").addEventListener("click", () => togglePause());
+  document.querySelector("#resumeButton").addEventListener("click", () => togglePause());
   document.querySelector("#restartButton").addEventListener("click", () => { resetGame(); startGame(); });
   function toggleMute() { muted=!muted; ui.mute.textContent=`Sound: ${muted?"off":"on"}`; ui.mute.setAttribute("aria-pressed", String(muted)); }
   ui.mute.addEventListener("click", toggleMute);

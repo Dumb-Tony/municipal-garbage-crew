@@ -11,10 +11,12 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Capacity and compactor | Stop interlock, loose/packed volume, cooldown | S | Route loop |
 | Done | Results and consequences | Score, misses, complaints, spills, damage | S | Route loop |
 | Done | Deterministic shift seed + event ledger | Reproducible route decisions and structured event history | S | Current slice |
-| P0 | Event-driven score reducer + result ledger | Fully auditable score and replay-safe mutations | M | Event ledger |
-| P0 | Spill recovery interaction | Mistake becomes new work, not only penalty | M | Event ledger |
-| P0 | Ambiguous contamination inspection | Genuine time-versus-certainty decision | M | Event ledger |
-| P0 | Pause/focus safety + input remap layer | Fair standalone play | S | Current input |
+| Done | Itemized result ledger | Auditable end-of-shift score | S | Event ledger |
+| P0 | Event-driven score reducer | Replay-safe score mutations and rule tests | M | Event ledger |
+| Done | Spill recovery interaction | Mistake becomes new work, not only penalty | M | Event ledger |
+| Done | Ambiguous contamination inspection | Genuine time-versus-certainty decision | M | Event ledger |
+| Done | Pause/focus safety | Fair standalone play when focus changes | S | Current input |
+| P0 | Remappable input/gamepad layer | Device-independent actions | M | Current input |
 | P0 | Five-person usability playtest | Evidence for M0 decision | S | Current slice |
 | P1 | On-foot loader greybox | Validate walk/grab/tilt/tip | L | Input abstraction |
 | P1 | Container physics model | Mass, wheels, grip, integrity, tip state | L | Loader greybox |
@@ -94,9 +96,12 @@ One polished district, three job variants, 2–5 players, join/reconnect, comple
 | Accelerate / reverse | W/S or Up/Down | Speed changes gradually; release applies drag |
 | Steer | A/D or Left/Right | Steering scales with speed and reverses naturally |
 | Inspect nearest stop | Space | Must be within 74 px and moving ≤22 px/s |
+| Check uncertain contents | Q or button | Inspection open on obscured load; costs five route seconds |
 | Collect | E or button | Inspection open; refuses if projected capacity >8 |
 | Tag and leave | R or button | Inspection open; correct for contamination, complaint otherwise |
 | Compact | C | Drive phase, speed ≤18, loose load present, cooldown clear |
+| Clean spill | X | Within 68 px, speed ≤18; costs three seconds and recovers score |
+| Pause/resume | P or button | Freezes route clock and traffic; focus loss pauses automatically |
 | Restart | Enter or button | Results only |
 | Mute | M or button | Any phase; Web Audio remains optional |
 
@@ -209,7 +214,7 @@ Assembly definitions should separate pure simulation, Unity presentation, networ
 - [ ] Fill near capacity; attempt over-capacity load; compact while stopped; retry successfully.
 - [ ] Attempt compaction while moving and during cooldown.
 - [ ] Hit traffic and blocked car; damage increments once per impact, not every frame.
-- [ ] Cause/observe spill across repeated collisions with loose load.
+- [ ] Cause/observe spill across repeated collisions with loose load; return, stop, and clean it with X.
 - [ ] Resolve all stops; results match counters.
 - [ ] Let timer expire with unresolved stops; each becomes a complaint in results.
 - [ ] Restart by button and Enter; all state resets.
@@ -236,17 +241,15 @@ Assembly definitions should separate pure simulation, Unity presentation, networ
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (manual in 0.1.0)
+### Playtest telemetry (manual in 0.3.0)
 
 Record: shift seed, time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, event count, restart choice, and a one-sentence causal account of the worst mistake.
 
 ## Explicit next implementation tasks
 
-1. Move all score mutations into event reducers and add rule tests for score idempotence.
-2. Display an itemized result ledger so the final score is auditable.
-3. Add spill zones with a stop/clean interaction, cleanup time, and remaining-debris consequence.
-4. Add “inspect closer” to one obscured bin: costs five seconds, reveals classification, and makes the correct choice nontrivial.
-5. Add pause behavior for `visibilitychange` and an action-map layer with gamepad support.
-6. Extract pure rules into modules and write tests for cargo invariants, stop transitions, timeout, and score idempotence.
-7. Tune route time, stop radius, vehicle steering, traffic speed, weights, and score from five observed playtests.
-8. Decide M0 pass/revise based on exit gate; only then start the Unity tactile sandbox.
+1. Move remaining live score mutations into event reducers and add rule tests for score idempotence.
+2. Add an action-map layer with remapping and gamepad support.
+3. Add a short cleanup animation/state and finite spill-kit resource.
+4. Extract pure rules into modules and write tests for cargo invariants, stop transitions, timeout, and score idempotence.
+5. Tune route time, stop radius, vehicle steering, traffic speed, weights, and score from five observed playtests.
+6. Decide M0 pass/revise based on exit gate; only then start the Unity tactile sandbox.

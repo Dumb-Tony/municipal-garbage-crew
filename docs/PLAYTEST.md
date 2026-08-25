@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.1.0  
+**Build:** 0.3.0
 **Tester:**  
 **Date / browser:**  
 
@@ -36,4 +36,3 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Strongest evidence for the concept:
 - Strongest evidence against the concept:
 - Required change before next test:
-
