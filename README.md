@@ -19,7 +19,7 @@ Drive with **WASD** or **arrow keys**. Stop beside a highlighted curb bin and pr
 
 ## Current slice
 
-Version `0.1.0` implements a single-player, one-screen neighborhood route. It is intentionally small: six stops, two contamination decisions, moving traffic, a blocked curb, truck capacity/compaction management, spills and collision penalties, route-time scoring, complaints, and a results screen.
+Version `0.2.0` implements a single-player, one-screen neighborhood route. It is intentionally small: six stops, two contamination decisions, moving traffic, a blocked curb, truck capacity/compaction management, spills and collision penalties, route-time scoring, complaints, deterministic shift events, and a results screen.
 
 ## Repository and publishing policy
 

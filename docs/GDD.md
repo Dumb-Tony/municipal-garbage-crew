@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.1.0  
+**Status:** Active preproduction / browser slice 0.2.0  
 **Last updated:** 2026-08-25  
 **Product direction:** 2–5 player cooperative 3D Unity/Steam game  
 **Current proof:** standalone 2D Canvas prototype, solo, no build step
@@ -212,7 +212,7 @@ Scoring has independent service, safety, cleanliness, compliance, and time dimen
 
 Test whether one route creates meaningful tension between safe handling, contamination judgment, capacity, positioning, and time—and whether mistakes remain legible and funny enough to invite a retry.
 
-### Included in 0.1.0
+### Included through 0.2.0
 
 - One-screen Maple Street route with six stops.
 - Top-down drivable rear-loader with momentum, steering, boundaries, and damage collisions.
@@ -222,6 +222,7 @@ Test whether one route creates meaningful tension between safe handling, contami
 - Two moving traffic cars and one blocked-curb obstacle.
 - Loose-load spill chance on collision, visible debris, damage and score penalties.
 - 150-second shift, route guidance, scoring, missed-stop/complaint consequences, results, restart, and minimal generated audio.
+- Deterministic shift seed, deterministic spill checks, and a structured event ledger covering route decisions and consequences.
 
 ### Explicitly deferred
 
@@ -237,7 +238,7 @@ The current implementation is intentionally one script for frictionless delivery
 
 ### Data and state architecture
 
-The authoritative shift state contains phase, route clock, score ledger, truck state/cargo, stops, hazards, transient effects, and outcome counters. Definitions (stop templates, truck tuning, contamination rules) remain separate from runtime instances. All mutations should become named commands/events (`InspectStop`, `CollectLoad`, `Compact`, `Collision`, `ResolveStop`) so replays, networking, analytics, and tests can observe the same decisions.
+The authoritative shift state contains phase, route clock, score ledger, truck state/cargo, stops, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Definitions (stop templates, truck tuning, contamination rules) remain separate from runtime instances. The 0.2.0 prototype records major route events; remaining score mutations should move behind named commands/events (`InspectStop`, `CollectLoad`, `Compact`, `Collision`, `ResolveStop`) so replays, networking, analytics, and tests can observe the same decisions.
 
 Long-term persistence layers:
 
@@ -310,7 +311,7 @@ Exit criteria and task ordering are in `BUILD_PREP.md`.
 ## 20. Next implementation tasks
 
 1. Run five short playtests of 0.1.0; record completion rate, first collision, compactor use, decision errors, and whether players retry.
-2. Add deterministic route seeds and an event ledger so results can explain score changes.
+2. Move all score mutations into event reducers and display an itemized, auditable result ledger.
 3. Replace binary contamination with one ambiguous inspection case plus an optional closer-look action that costs time.
 4. Add a recoverable spill-cleanup interaction rather than leaving spills as particles and a penalty.
 5. Add keyboard remapping/gamepad input abstraction and pause/focus behavior.

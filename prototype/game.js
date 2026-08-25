@@ -23,6 +23,7 @@
   let muted = false;
   let last = 0;
   let game;
+  const SHIFT_SEED = 4040712;
 
   const stopsTemplate = [
     { id: 1, x: 188, y: 190, label: "12 Maple", kind: "Household", weight: 1.7, contaminated: false },
@@ -41,6 +42,9 @@
   function resetGame() {
     game = {
       phase: "READY",
+      seed: SHIFT_SEED,
+      rngState: SHIFT_SEED,
+      events: [],
       time: 150,
       score: 0,
       complaints: 0,
@@ -71,6 +75,13 @@
   function usedCapacity() { return game.loose + game.compacted; }
   function unresolved() { return game.stops.filter(s => s.state === "waiting").length; }
   function setStatus(text) { ui.status.textContent = text; }
+  function random() {
+    game.rngState = (Math.imul(1664525, game.rngState) + 1013904223) >>> 0;
+    return game.rngState / 4294967296;
+  }
+  function recordEvent(type, details = {}) {
+    game.events.push({ type, at: Number((150 - game.time).toFixed(2)), ...details });
+  }
 
   function beep(frequency = 220, duration = .08, type = "square", volume = .035) {
     if (muted) return;
@@ -91,6 +102,7 @@
   function startGame() {
     if (game.phase !== "READY") return;
     game.phase = "DRIVE";
+    recordEvent("shift_started", { seed: game.seed });
     ui.start.classList.add("hidden");
     setStatus("Follow the amber arrow. Stop beside a bin and press Space.");
     canvas.focus();
@@ -123,6 +135,7 @@
     if (!stop || distance > 74) { showMessage("Pull closer to a waiting curb bin."); return; }
     game.phase = "INSPECT";
     game.activeStop = stop;
+    recordEvent("stop_inspected", { stopId: stop.id });
     ui.decisionTitle.textContent = `${stop.label} · ${stop.kind}`;
     ui.decisionText.textContent = stop.contaminated
       ? "The load contains prohibited material. Collecting is faster, but risks a contamination complaint and a costly spill."
@@ -158,6 +171,7 @@
     game.loose += stop.weight;
     game.collected += 1;
     game.score += 120;
+    recordEvent("stop_collected", { stopId: stop.id, weight: stop.weight, contaminated: stop.contaminated });
     if (stop.contaminated) {
       game.badLoads += 1;
       game.complaints += 1;
@@ -178,6 +192,7 @@
     if (game.phase !== "INSPECT" || !stop) return;
     stop.state = "tagged";
     game.tagged += 1;
+    recordEvent("stop_tagged", { stopId: stop.id, contaminated: stop.contaminated });
     if (stop.contaminated) {
       game.score += 70;
       showMessage("Correctly tagged contamination. +70");
@@ -207,6 +222,7 @@
     game.phase = "COMPACT";
     game.shake = .7;
     game.score += 25;
+    recordEvent("compactor_cycled", { looseBefore: Number(before.toFixed(2)), compactedAdded: Number(packed.toFixed(2)) });
     showMessage(`Compacted ${before.toFixed(1)} units into ${packed.toFixed(1)}. +25`);
     beep(82, .42, "sawtooth", .055);
     setTimeout(() => { if (game.phase === "COMPACT") game.phase = "DRIVE"; }, 850);
@@ -225,6 +241,7 @@
     game.score -= game.spills * 70 + game.damage * 45;
     game.score = Math.max(0, Math.round(game.score));
     game.phase = "RESULT";
+    recordEvent("shift_finished", { timedOut, score: game.score, complaints: game.complaints });
     ui.decision.classList.add("hidden");
     ui.resultTitle.textContent = timedOut ? "Shift clock expired" : (game.complaints === 0 ? "Clean route" : "Route closed");
     ui.resultSummary.textContent = game.complaints === 0
@@ -233,7 +250,8 @@
     ui.resultStats.innerHTML = [
       ["Score", game.score], ["Collected", `${game.collected}/6`],
       ["Correct tags", game.stops.filter(s => s.state === "tagged" && s.contaminated).length],
-      ["Spills", game.spills], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`]
+      ["Spills", game.spills], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
+      ["Shift seed", game.seed], ["Events logged", game.events.length]
     ].map(([a, b]) => `<span><b>${a}</b><br>${b}</span>`).join("");
     ui.result.classList.remove("hidden");
     setStatus("Shift complete. Press Enter to run it again.");
@@ -302,11 +320,12 @@
         t.stun = .45;
         t.speed *= -.25;
         game.damage += 1;
+        recordEvent("collision", { movingTraffic: o.moving, looseLoad: Number(game.loose.toFixed(2)) });
         game.score -= 25;
         game.shake = .45;
         showMessage(o.moving ? "Traffic collision! Truck damage recorded." : "Blocked curb clipped. Back out carefully.");
         beep(72, .3, "sawtooth", .07);
-        if (game.loose > 1 && Math.random() < .48) createSpill();
+        if (game.loose > 1 && random() < .48) createSpill();
         break;
       }
     }
@@ -315,6 +334,7 @@
   function createSpill() {
     game.spills += 1;
     game.loose = Math.max(0, game.loose - .45);
+    recordEvent("spill_created", { remainingLoose: Number(game.loose.toFixed(2)) });
     for (let i = 0; i < 10; i++) game.particles.push({
       x: game.truck.x, y: game.truck.y,
       vx: (Math.random() - .5) * 75, vy: (Math.random() - .5) * 75,

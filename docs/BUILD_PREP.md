@@ -10,7 +10,8 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Drivable truck and hazards | Positioning, traffic, damage, blocked curb | M | — |
 | Done | Capacity and compactor | Stop interlock, loose/packed volume, cooldown | S | Route loop |
 | Done | Results and consequences | Score, misses, complaints, spills, damage | S | Route loop |
-| P0 | Deterministic shift seed + event ledger | Reproducible tests and explainable score | S | Current slice |
+| Done | Deterministic shift seed + event ledger | Reproducible route decisions and structured event history | S | Current slice |
+| P0 | Event-driven score reducer + result ledger | Fully auditable score and replay-safe mutations | M | Event ledger |
 | P0 | Spill recovery interaction | Mistake becomes new work, not only penalty | M | Event ledger |
 | P0 | Ambiguous contamination inspection | Genuine time-versus-certainty decision | M | Event ledger |
 | P0 | Pause/focus safety + input remap layer | Fair standalone play | S | Current input |
@@ -237,11 +238,11 @@ Assembly definitions should separate pure simulation, Unity presentation, networ
 
 ### Playtest telemetry (manual in 0.1.0)
 
-Record: time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, restart choice, and a one-sentence causal account of the worst mistake.
+Record: shift seed, time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, event count, restart choice, and a one-sentence causal account of the worst mistake.
 
 ## Explicit next implementation tasks
 
-1. Add `seed`, deterministic PRNG, and structured `events[]` to shift state; move all score mutations into event reducers.
+1. Move all score mutations into event reducers and add rule tests for score idempotence.
 2. Display an itemized result ledger so the final score is auditable.
 3. Add spill zones with a stop/clean interaction, cleanup time, and remaining-debris consequence.
 4. Add “inspect closer” to one obscured bin: costs five seconds, reveals classification, and makes the correct choice nontrivial.
@@ -249,4 +250,3 @@ Record: time to first movement, time to first stop, compactor attempts/successes
 6. Extract pure rules into modules and write tests for cargo invariants, stop transitions, timeout, and score idempotence.
 7. Tune route time, stop radius, vehicle steering, traffic speed, weights, and score from five observed playtests.
 8. Decide M0 pass/revise based on exit gate; only then start the Unity tactile sandbox.
-
