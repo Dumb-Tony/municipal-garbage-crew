@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#16221b">
+  <meta name="description" content="Run one messy small-town sanitation route in Municipal Garbage Crew.">
+  <title>Municipal Garbage Crew — First Route</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">Department of Public Works · Route 04</p>
+        <h1>Municipal Garbage Crew</h1>
+      </div>
+      <div class="shift-tag">TUESDAY · 7:12 AM</div>
+    </header>
+
+    <section class="game-frame" aria-label="Playable garbage collection route">
+      <canvas id="game" width="960" height="600" tabindex="0" aria-label="Top-down driving game. Use WASD or arrow keys to drive, Space to inspect a bin, E to collect, R to tag contaminated waste, and C to compact."></canvas>
+      <div id="startPanel" class="overlay-card">
+        <p class="stamp">FIRST ROUTE</p>
+        <h2>Maple Street is waiting.</h2>
+        <p>Clear six curb stops before the shift clock runs out. Inspect questionable loads, protect the truck, and leave the street cleaner than you found it.</p>
+        <div class="control-grid" aria-label="Controls">
+          <span><b>WASD / Arrows</b> Drive</span>
+          <span><b>Space</b> Inspect stop</span>
+          <span><b>E / R</b> Collect / tag</span>
+          <span><b>C</b> Compact when stopped</span>
+        </div>
+        <button id="startButton" type="button">Clock in</button>
+      </div>
+      <div id="decisionPanel" class="decision-card hidden" role="dialog" aria-live="polite" aria-labelledby="decisionTitle">
+        <p class="eyebrow">CURBSIDE CHECK</p>
+        <h2 id="decisionTitle">Contents</h2>
+        <p id="decisionText"></p>
+        <div class="decision-actions">
+          <button id="collectButton" type="button"><kbd>E</kbd> Collect</button>
+          <button id="tagButton" type="button"><kbd>R</kbd> Tag & leave</button>
+        </div>
+      </div>
+      <div id="resultPanel" class="overlay-card hidden" role="dialog" aria-live="polite">
+        <p class="stamp">SHIFT REPORT</p>
+        <h2 id="resultTitle">Route complete</h2>
+        <p id="resultSummary"></p>
+        <div id="resultStats" class="result-stats"></div>
+        <button id="restartButton" type="button">Run route again</button>
+      </div>
+    </section>
+
+    <footer class="footer-note">
+      <span>Prototype 0.1.0</span>
+      <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
+      <button id="muteButton" class="text-button" type="button" aria-pressed="false">Sound: on</button>
+    </footer>
+  </main>
+  <script src="game.js" defer></script>
+</body>
+</html>
