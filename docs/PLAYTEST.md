@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.16.0
+**Build:** 0.17.0
 **Tester:**  
 **Date / browser:**  
 **Shift setup / assists:**
@@ -39,6 +39,7 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Completion? Final time / score / complaints:
 - Reported average FPS / worst frame / slow frames / viewport:
 - Reported simulation steps / dropped stall time:
+- Offline status shown / installed / successfully reopened without network:
 - Did they retry without prompting?
 
 ## Ask afterward

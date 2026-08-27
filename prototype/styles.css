@@ -119,6 +119,7 @@ kbd { font-family: inherit; border: 1px solid currentColor; padding: 1px 5px; }
 .footer-note > span:first-child { color: #82735e; }
 .footer-note > span:nth-child(2) { flex: 1; text-align: center; color: #a0a59f; }
 .footer-actions { position: relative; display: flex; align-items: center; gap: 6px; }
+.offline-status { color: #78857a; font-size: .56rem; text-transform: uppercase; }
 .text-button { padding: 5px 8px; color: #8c918d; border: 0; background: transparent; box-shadow: none; font-size: .67rem; }
 .audio-mixer { position: relative; }
 .audio-mixer summary { padding: 5px 8px; color: #9b8b72; cursor: pointer; text-transform: uppercase; list-style: none; }

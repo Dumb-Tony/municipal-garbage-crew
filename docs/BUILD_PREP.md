@@ -16,6 +16,7 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Shared pure rules module + native tests | One tested source for final score, progression bounds, history, and stop invariants | M | Event ledger |
 | Done | Fixed 60 Hz simulation clock | Refresh-independent handling with capped catch-up and timing tests | M | Pure rules/tests |
 | Done | Three solo contract variants | Baseline, bulk workload, and assigned-cleanup jobs with bounded modifiers | L | Fixed simulation |
+| Done | Installable offline web shell | Scoped manifest/service worker, versioned full-route cache, visible readiness | M | Stable module list |
 | P0 | Event-driven score reducer | Replay-safe score mutations and rule tests | M | Event ledger |
 | Done | Spill recovery interaction | Mistake becomes new work, not only penalty | M | Event ledger |
 | Done | Ambiguous contamination inspection | Genuine time-versus-certainty decision | M | Event ledger |
@@ -190,8 +191,15 @@ prototype/
   input.js
   timing.js
   contracts.js
+  pwa.js
+  service-worker.js
+  manifest.webmanifest
+  assets/bsa-icon.svg
+  assets/bsa-icon-192.png
+  assets/bsa-icon-512.png
   game.js
   tests/contracts.test.js
+  tests/pwa.test.js
   tests/input.test.js
   tests/rules.test.js
   tests/timing.test.js
@@ -285,6 +293,8 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Select each contract and reload; verify selection, briefing, duration, seed, content count, traffic modifier, payout multiplier, results, last-shift note, and report agree.
 - [ ] Bulk Amnesty requires the bag, mattress, sofa, and radiator; every tied stop remains unresolved until its bin and loose items are serviced, and all objects remain recoverable after drops/traffic.
 - [ ] After-Storm Sweep begins with three visible assigned debris fields; they add no caused-spill penalty, each can be cleaned en route, and unresolved debris prevents a clean route close.
+- [ ] On HTTPS/localhost, wait for Offline ready, reload once, disconnect the origin, and reload again; title, depot, contracts, art, modules, and route start remain available with no uncached dependency.
+- [ ] Confirm the manifest resolves within `prototype/`, standalone launch returns to that scope, the Bellwether badge renders, old versioned caches are removed on activation, and direct `file:` play reports install unavailable without affecting gameplay.
 - [ ] Run equivalent input captures at 30, 60, and 120 Hz display pacing; route time, movement distance, handling progress, traffic motion, and collision outcomes remain within one 60 Hz step.
 - [ ] Suspend or stall rendering for more than 250 ms; verify catch-up is capped, the route remains responsive, and discarded time appears in the report.
 
@@ -309,13 +319,13 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (generated in 0.16.0)
+### Playtest telemetry (generated in 0.17.0)
 
 The results screen generates a copyable report containing contract and payout modifier, shift seed, active assists, active primary bindings, elapsed time, first movement from either control mode, cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, caused/assigned/cleaned spills, stumbles, damage, score, complaints, credits, trust, installed upgrades, average frame rate, worst frame, slow-frame count, fixed simulation-step count, discarded stall time, viewport, and display pixel ratio. The observer still records confusion, voluntary retry, contract clarity, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
 
 ## Explicit next implementation tasks
 
-1. Run at least five fresh external solo sessions on build 0.16.0, collecting the generated report plus observer notes; use Maple Regular for the comparable first run and allow voluntary contract selection on retries.
+1. Run at least five fresh external solo sessions on build 0.17.0, collecting the generated report plus observer notes; use Maple Regular for the comparable first run and allow voluntary contract selection on retries.
 2. Tune clarity, pacing, economy, accessibility, and audio fatigue from that evidence, then repeat any failed M5 exit checks.
 3. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
 4. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo, persistence migrations, and stop-state invariants.

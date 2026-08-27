@@ -4,13 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080a0d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Work the frozen pre-dawn streets of Bellwether in a gritty municipal sanitation route game.">
   <meta property="og:title" content="Municipal Garbage Crew">
   <meta property="og:description" content="One frozen route. Six bad curbs. Keep Bellwether moving.">
   <meta property="og:image" content="https://dumb-tony.github.io/municipal-garbage-crew/prototype/assets/bellwether-noir-title-v2.png">
   <meta name="twitter:card" content="summary_large_image">
   <title>Municipal Garbage Crew — First Route</title>
-  <link rel="stylesheet" href="styles.css?v=0.16.0">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/bsa-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css?v=0.17.0">
 </head>
 <body>
   <main class="shell">
@@ -101,9 +106,11 @@
     </section>
 
     <footer class="footer-note">
-      <span>BUILD 0.16.0 // THREE CONTRACTS</span>
+      <span>BUILD 0.17.0 // OFFLINE SHIFT</span>
       <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
       <div class="footer-actions">
+        <span id="offlineStatus" class="offline-status" aria-live="polite">Preparing offline cache</span>
+        <button id="installButton" class="text-button hidden" type="button">Install game</button>
         <details class="audio-mixer">
           <summary>Audio mix</summary>
           <div class="audio-mixer-panel">
@@ -119,10 +126,11 @@
       </div>
     </footer>
   </main>
-  <script src="rules.js?v=0.16.0" defer></script>
-  <script src="input.js?v=0.16.0" defer></script>
-  <script src="timing.js?v=0.16.0" defer></script>
-  <script src="contracts.js?v=0.16.0" defer></script>
-  <script src="game.js?v=0.16.0" defer></script>
+  <script src="rules.js?v=0.17.0" defer></script>
+  <script src="input.js?v=0.17.0" defer></script>
+  <script src="timing.js?v=0.17.0" defer></script>
+  <script src="contracts.js?v=0.17.0" defer></script>
+  <script src="game.js?v=0.17.0" defer></script>
+  <script src="pwa.js?v=0.17.0" defer></script>
 </body>
 </html>

@@ -6,7 +6,7 @@ A living design package and standalone browser vertical slice for a tactile, sys
 
 ## Play
 
-Open `prototype/index.html` in a modern desktop browser. No install, server, or build step is required.
+Open `prototype/index.html` in a modern desktop browser. No install, server, or build step is required. The public HTTPS build also installs as a standalone browser app and caches the complete current route for offline play; use **Install game** when the browser exposes it, or the browser’s install-app menu.
 
 Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F** to exit the truck. On foot, press **Space** to inspect or load and **E** to grab/release bins, bags, and oversized waste. Hold **Space** with **A/D** to balance a bin lift; hold **Shift** to brace an awkward oversized item. Return empty bins to their amber markers. Use **R** to tag contamination, **Q** to check uncertain waste, **C** to compact, **X** to recover spills or ruptured bags, and **P** to pause.
 
@@ -20,9 +20,9 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.16.0` completes the M5 three-contract content target on the same polished district. Maple Regular remains the comparable baseline; Bulk Amnesty adds heavier carts plus a broken sofa and cast-iron radiator; After-Storm Sweep adds three assigned debris fields and slower traffic. Extra workload receives score-neutral time and bounded payout multipliers, contract selection persists, and results/history/reports identify the job. Fixed-step handling and remappable keyboard actions remain intact. The game remains browser-first; Unity is not part of the plan.
+Version `0.17.0` adds the M5 downloadable web shell. The public build has an install manifest, Bellwether app badge, scoped versioned service worker, explicit offline/install status, browser install action when available, and a network-first cache fallback containing the entire current route. Direct-file play still works without registration. Three contracts, fixed-step handling, progression, and remappable keyboard actions remain intact. The game remains browser-first; Unity is not part of the plan.
 
-Run `npm test` to verify contract content/modifiers, fixed-step timing, input mapping, scoring, campaign bounds, address history, and stop-state invariants. No install or build step is required.
+Run `npm test` to verify the offline shell manifest, contract content, fixed-step timing, input mapping, scoring, campaign bounds, address history, and stop-state invariants. No install or build step is required.
 
 ## Repository and publishing policy
 

@@ -1,0 +1,33 @@
+{
+  "id": "./",
+  "name": "Municipal Garbage Crew",
+  "short_name": "Garbage Crew",
+  "description": "Work Bellwether's frozen sanitation routes in a tactile municipal job game.",
+  "start_url": "./?source=installed",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#080a0d",
+  "theme_color": "#1f342c",
+  "categories": ["games", "simulation"],
+  "icons": [
+    {
+      "src": "assets/bsa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/bsa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/bsa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
