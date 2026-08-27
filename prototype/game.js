@@ -26,7 +26,7 @@
   let muted = false;
   let last = 0;
   let game;
-  const SHIFT_DURATION = 180;
+  const SHIFT_DURATION = 300;
   const SHIFT_SEED = 4040712;
 
   const stopsTemplate = [
@@ -56,6 +56,7 @@
       cleanedSpills: 0,
       handlingDrops: 0,
       damage: 0,
+      workerStumbles: 0,
       badLoads: 0,
       collected: 0,
       tagged: 0,
@@ -69,9 +70,11 @@
       particles: [],
       spillZones: [],
       phaseBeforePause: "DRIVE",
+      mode: "truck",
       shake: 0,
       truck: { x: 112, y: 305, angle: 0, speed: 0, stun: 0, collisionCooldown: 0 },
-      stops: stopsTemplate.map(s => ({ ...s, state: "waiting", revealed: false, wobble: randomSeeded(s.id) * 6 })),
+      worker: { x: 64, y: 305, angle: 0, grabbedStop: null, stumble: 0, collisionCooldown: 0 },
+      stops: stopsTemplate.map(s => ({ ...s, binX: s.x, binY: s.y, state: "waiting", authorized: false, revealed: false, wobble: randomSeeded(s.id) * 6 })),
       traffic: trafficTemplate.map(t => ({ ...t }))
     };
     ui.start.classList.remove("hidden");
@@ -82,7 +85,7 @@
   }
 
   function usedCapacity() { return game.loose + game.compacted; }
-  function unresolved() { return game.stops.filter(s => s.state === "waiting").length; }
+  function unresolved() { return game.stops.filter(s => !["collected", "tagged"].includes(s.state)).length; }
   function uncleanedSpills() { return game.spillZones.filter(s => !s.cleaned).length; }
   function randomSeeded(offset) { return ((Math.imul(1103515245, SHIFT_SEED + offset) + 12345) >>> 0) / 4294967296; }
   function setStatus(text) { ui.status.textContent = text; }
@@ -115,7 +118,7 @@
     game.phase = "DRIVE";
     recordEvent("shift_started", { seed: game.seed });
     ui.start.classList.add("hidden");
-    setStatus("Follow the amber arrow. Stop beside a bin and press Space.");
+    setStatus("Follow the amber arrow. Stop near a curb and press F to exit the cab.");
     canvas.focus();
     beep(440, .12, "sawtooth");
   }
@@ -126,24 +129,32 @@
     setStatus(text);
   }
 
-  function nearestStop() {
+  function actorPosition() { return game.mode === "foot" ? game.worker : game.truck; }
+
+  function hopperPosition() {
+    return {
+      x: game.truck.x - Math.cos(game.truck.angle) * 51,
+      y: game.truck.y - Math.sin(game.truck.angle) * 51
+    };
+  }
+
+  function nearestStop(origin = actorPosition()) {
     let best = null;
     let bestDistance = Infinity;
     for (const stop of game.stops) {
-      if (stop.state !== "waiting") continue;
-      const distance = Math.hypot(stop.x - game.truck.x, stop.y - game.truck.y);
+      if (["collected", "tagged", "loading"].includes(stop.state)) continue;
+      const distance = Math.hypot(stop.binX - origin.x, stop.binY - origin.y);
       if (distance < bestDistance) { best = stop; bestDistance = distance; }
     }
     return { stop: best, distance: bestDistance };
   }
 
   function inspectStop() {
-    if (game.phase !== "DRIVE" || Math.abs(game.truck.speed) > 22) {
-      if (game.phase === "DRIVE") showMessage("Brake to a near stop before handling a bin.");
-      return;
-    }
+    if (game.phase !== "DRIVE") return;
+    if (game.mode !== "foot") { showMessage("Stop the truck and press F to step out at the curb."); return; }
+    if (game.worker.grabbedStop) { showMessage("Set the bin down with E before inspecting another stop."); return; }
     const { stop, distance } = nearestStop();
-    if (!stop || distance > 74) { showMessage("Pull closer to a waiting curb bin."); return; }
+    if (!stop || stop.state !== "waiting" || distance > 40) { showMessage("Walk closer to a waiting curb bin."); return; }
     game.phase = "INSPECT";
     game.activeStop = stop;
     recordEvent("stop_inspected", { stopId: stop.id });
@@ -179,18 +190,25 @@
   function collectActive() {
     const stop = game.activeStop;
     if (game.phase !== "INSPECT" || !stop) return;
-    const projected = usedCapacity() + stop.weight;
-    if (projected > 8) {
-      showMessage("Hopper is full. Close this check and compact before loading.");
-      ui.decision.classList.add("hidden");
-      game.phase = "DRIVE";
-      game.activeStop = null;
+    ui.decision.classList.add("hidden");
+    stop.authorized = true;
+    stop.state = "authorized";
+    game.phase = "DRIVE";
+    game.activeStop = null;
+    recordEvent("service_authorized", { stopId: stop.id });
+    showMessage("Pickup approved. Press E to grab the bin and wheel it to the rear hopper.", 3.2);
+    beep(150, .14, "square");
+  }
+
+  function beginBinLoad(stop) {
+    if (usedCapacity() + stop.weight > 8) {
+      showMessage("Hopper is full. Drop the bin and compact before loading.");
       beep(110, .18, "sawtooth");
       return;
     }
-    ui.decision.classList.add("hidden");
-    game.phase = "LOAD";
+    game.worker.grabbedStop = null;
     stop.state = "loading";
+    game.phase = "LOAD";
     game.loading = { stop, progress: 0, balance: (random() - .5) * .2, drift: (random() - .5) * .5, driftTimer: .7, drops: 0 };
     game.truck.speed = 0;
     beep(150, .14, "square");
@@ -198,23 +216,36 @@
 
   function finishLoad() {
     const stop = game.loading.stop;
-    stop.state = "collected";
+    const hopper = hopperPosition();
+    stop.state = "empty";
+    stop.binX = hopper.x;
+    stop.binY = hopper.y;
     game.loose += stop.weight;
-    game.collected += 1;
-    game.score += 120;
-    recordEvent("stop_collected", { stopId: stop.id, weight: stop.weight, contaminated: stop.contaminated, handlingDrops: game.loading.drops });
+    recordEvent("bin_emptied", { stopId: stop.id, weight: stop.weight, contaminated: stop.contaminated, handlingDrops: game.loading.drops });
     if (stop.contaminated) {
       game.badLoads += 1;
       game.complaints += 1;
       game.score -= 90;
-      showMessage("Contaminated load accepted. Dispatch logged a violation.");
+      showMessage("Contaminated load accepted. Violation logged—now return the empty bin.");
     } else {
-      showMessage(`${stop.label} cleared. +120`);
+      showMessage("Bin emptied. Return it to the marked curb to finish the stop.");
     }
     game.loading = null;
     game.activeStop = null;
     game.phase = "DRIVE";
     beep(260, .09, "square");
+  }
+
+  function returnBin(stop) {
+    stop.state = "collected";
+    stop.binX = stop.x;
+    stop.binY = stop.y;
+    game.worker.grabbedStop = null;
+    game.collected += 1;
+    game.score += 120;
+    recordEvent("stop_collected", { stopId: stop.id });
+    showMessage(`${stop.label} serviced and bin returned. +120`);
+    beep(420, .1, "sine");
     checkRouteEnd();
   }
 
@@ -243,6 +274,11 @@
   function compact() {
     if (game.phase !== "DRIVE") return;
     if (Math.abs(game.truck.speed) > 18) { showMessage("Compactor interlock: stop the truck first."); return; }
+    if (game.mode === "foot") {
+      const hopper = hopperPosition();
+      if (Math.hypot(game.worker.x - hopper.x, game.worker.y - hopper.y) > 58) { showMessage("Walk to the rear controls before cycling the compactor."); return; }
+      if (game.worker.grabbedStop) { showMessage("Drop the bin before using the compactor controls."); return; }
+    }
     if (game.compactorCooldown > 0) { showMessage("Compactor is cycling. Give it a moment."); return; }
     if (game.loose < .3) { showMessage("Nothing loose in the hopper."); return; }
     const before = game.loose;
@@ -266,9 +302,10 @@
 
   function nearestSpill() {
     let best = null, bestDistance = Infinity;
+    const actor = actorPosition();
     for (const spill of game.spillZones) {
       if (spill.cleaned) continue;
-      const distance = Math.hypot(spill.x - game.truck.x, spill.y - game.truck.y);
+      const distance = Math.hypot(spill.x - actor.x, spill.y - actor.y);
       if (distance < bestDistance) { best = spill; bestDistance = distance; }
     }
     return { spill: best, distance: bestDistance };
@@ -276,9 +313,10 @@
 
   function cleanSpill() {
     if (game.phase !== "DRIVE") return;
-    if (Math.abs(game.truck.speed) > 18) { showMessage("Stop beside the spill before deploying the cleanup kit."); return; }
+    if (game.mode !== "foot") { showMessage("Stop nearby and press F—the cleanup kit is worked on foot."); return; }
+    if (game.worker.grabbedStop) { showMessage("Set the bin down before opening the cleanup kit."); return; }
     const { spill, distance } = nearestSpill();
-    if (!spill || distance > 68) { showMessage("No spill within cleanup range."); return; }
+    if (!spill || distance > 48) { showMessage("Walk closer to the spill before using the cleanup kit."); return; }
     spill.cleaned = true;
     game.cleanedSpills += 1;
     game.time = Math.max(0, game.time - 3);
@@ -302,7 +340,8 @@
       ["Compactor operation", compactions * 25], ["Spill recovery", game.cleanedSpills * 40],
       ["Time remaining", Math.floor(game.time) * 2], ["Incorrect tags", wrongTags * -60],
       ["Contaminated loads", game.badLoads * -90], ["Missed stops", missed * -80],
-      ["Handling slips", game.handlingDrops * -20], ["Spills created", game.spills * -70], ["Truck damage", game.damage * -45]
+      ["Handling slips", game.handlingDrops * -20], ["Spills created", game.spills * -70],
+      ["Truck damage", game.damage * -45], ["Traffic stumbles", game.workerStumbles * -25]
     ];
     game.score = Math.max(0, scoreLines.reduce((sum, line) => sum + line[1], 0));
     game.phase = "RESULT";
@@ -315,7 +354,7 @@
     ui.resultStats.innerHTML = [
       ["Score", game.score], ["Collected", `${game.collected}/6`],
       ["Correct tags", game.stops.filter(s => s.state === "tagged" && s.contaminated).length],
-      ["Handling slips", game.handlingDrops], ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
+      ["Handling slips", game.handlingDrops], ["Traffic stumbles", game.workerStumbles], ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
       ["Shift seed", game.seed], ["Events logged", game.events.length]
     ].map(([a, b]) => `<span><b>${a}</b><br>${b}</span>`).join("");
     ui.resultLedger.innerHTML = scoreLines.filter(line => line[1] !== 0).map(([label, value]) =>
@@ -341,8 +380,127 @@
       return;
     }
     if (game.phase !== "DRIVE") return;
-    updateTruck(dt);
-    checkCollisions();
+    if (game.mode === "truck") {
+      updateTruck(dt);
+      checkCollisions();
+    } else {
+      updateWorker(dt);
+      checkWorkerTraffic();
+    }
+  }
+
+  function exitEnterTruck() {
+    if (game.phase !== "DRIVE") return;
+    const t = game.truck;
+    const w = game.worker;
+    if (game.mode === "truck") {
+      if (Math.abs(t.speed) > 10) { showMessage("Brake before leaving the cab."); return; }
+      const hopper = hopperPosition();
+      w.x = Math.max(24, Math.min(W - 24, hopper.x));
+      w.y = Math.max(158, Math.min(442, hopper.y + 26));
+      w.angle = t.angle;
+      game.mode = "foot";
+      t.speed = 0;
+      recordEvent("cab_exited");
+      showMessage("On foot. Walk to a bin and press Space to inspect it.");
+      beep(260, .06, "square");
+      return;
+    }
+    if (w.grabbedStop) { showMessage("Release the bin with E before entering the cab."); return; }
+    if (Math.hypot(w.x - t.x, w.y - t.y) > 60) { showMessage("Walk closer to the cab to get in."); return; }
+    game.mode = "truck";
+    recordEvent("cab_entered");
+    showMessage("Back in the cab. Follow the amber route arrow.");
+    beep(310, .06, "square");
+  }
+
+  function toggleGrab() {
+    if (game.phase !== "DRIVE" || game.mode !== "foot") return;
+    const w = game.worker;
+    if (w.grabbedStop) {
+      const stop = game.stops.find(s => s.id === w.grabbedStop);
+      w.grabbedStop = null;
+      recordEvent("bin_released", { stopId: stop?.id });
+      showMessage("Bin released.", 1.2);
+      return;
+    }
+    const { stop, distance } = nearestStop(w);
+    if (!stop || distance > 38) { showMessage("No serviceable bin within reach."); return; }
+    if (stop.state === "waiting") { showMessage("Inspect this stop with Space before moving its bin."); return; }
+    if (!["authorized", "empty"].includes(stop.state)) return;
+    w.grabbedStop = stop.id;
+    recordEvent("bin_grabbed", { stopId: stop.id, state: stop.state });
+    showMessage(stop.state === "empty" ? "Wheel the empty bin back to its amber curb marker." : "Wheel the bin to the rear hopper.", 2.4);
+    beep(205, .05, "square");
+  }
+
+  function handleSpaceAction() {
+    if (game.phase !== "DRIVE") return;
+    if (game.mode === "truck") { inspectStop(); return; }
+    const w = game.worker;
+    if (!w.grabbedStop) { inspectStop(); return; }
+    const stop = game.stops.find(s => s.id === w.grabbedStop);
+    if (!stop) return;
+    if (stop.state === "authorized") {
+      const hopper = hopperPosition();
+      if (Math.hypot(stop.binX - hopper.x, stop.binY - hopper.y) <= 48) beginBinLoad(stop);
+      else showMessage("Wheel the bin closer to the truck's rear hopper.");
+      return;
+    }
+    if (stop.state === "empty") {
+      if (Math.hypot(stop.binX - stop.x, stop.binY - stop.y) <= 42) returnBin(stop);
+      else showMessage("Return the empty bin to its amber curb marker.");
+    }
+  }
+
+  function updateWorker(dt) {
+    const w = game.worker;
+    w.stumble = Math.max(0, w.stumble - dt);
+    w.collisionCooldown = Math.max(0, w.collisionCooldown - dt);
+    if (w.stumble > 0) return;
+    const dx = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
+    const dy = (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0);
+    const length = Math.hypot(dx, dy) || 1;
+    const speed = w.grabbedStop ? 62 : 82;
+    if (dx || dy) {
+      w.angle = Math.atan2(dy, dx);
+      w.x = Math.max(22, Math.min(W - 22, w.x + dx / length * speed * dt));
+      w.y = Math.max(157, Math.min(443, w.y + dy / length * speed * dt));
+    }
+    if (w.grabbedStop) {
+      const stop = game.stops.find(s => s.id === w.grabbedStop);
+      if (stop) {
+        const targetX = w.x - Math.cos(w.angle) * 22;
+        const targetY = w.y - Math.sin(w.angle) * 22;
+        const follow = 1 - Math.pow(.0008, dt);
+        stop.binX += (targetX - stop.binX) * follow;
+        stop.binY += (targetY - stop.binY) * follow;
+      }
+    }
+  }
+
+  function checkWorkerTraffic() {
+    const w = game.worker;
+    if (w.collisionCooldown > 0) return;
+    for (const car of game.traffic) {
+      if (Math.hypot(w.x - car.x, w.y - car.y) < 21) {
+        w.collisionCooldown = 1.4;
+        w.stumble = .55;
+        w.x = Math.max(24, Math.min(W - 24, w.x - Math.sign(car.vx) * 30));
+        if (w.grabbedStop) {
+          recordEvent("bin_dropped_in_traffic", { stopId: w.grabbedStop });
+          w.grabbedStop = null;
+        }
+        game.workerStumbles += 1;
+        game.score -= 25;
+        game.time = Math.max(0, game.time - 2);
+        game.shake = .5;
+        recordEvent("worker_stumbled", { trafficX: Number(car.x.toFixed(1)) });
+        showMessage("Traffic clipped the crew—bin dropped, but you're still working. -2 seconds");
+        beep(92, .2, "sawtooth", .06);
+        break;
+      }
+    }
   }
 
   function updateHandling(dt) {
@@ -459,6 +617,7 @@
       drawSpills();
       drawParticles();
       drawTruck();
+      drawWorker();
       drawWeather();
       drawNoirPass();
       drawHUD();
@@ -528,23 +687,27 @@
 
   function drawStops() {
     for (const stop of game.stops) {
-      if (stop.state === "collected") continue;
-      let x = stop.x, y = stop.y;
+      if (["collected", "tagged"].includes(stop.state)) continue;
+      if (stop.state === "empty") {
+        ctx.save();ctx.translate(stop.x,stop.y);ctx.strokeStyle="#e99b32";ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.strokeRect(-17,-21,34,42);ctx.setLineDash([]);ctx.fillStyle="rgba(8,10,12,.82)";ctx.fillRect(-37,-36,74,12);ctx.fillStyle="#e5ad58";ctx.font="bold 8px Courier New";ctx.textAlign="center";ctx.fillText("RETURN BIN",0,-27);ctx.restore();
+      }
+      let x = stop.binX, y = stop.binY;
       if (stop.state === "loading" && game.loading) {
         const p = Math.min(1, game.loading.progress);
         const lift = Math.sin(p * Math.PI) * 60;
-        x += (game.truck.x - stop.x) * p + game.loading.balance * 24;
-        y += (game.truck.y - stop.y) * p - lift;
+        const hopper = hopperPosition();
+        x += (hopper.x - stop.binX) * p + game.loading.balance * 24;
+        y += (hopper.y - stop.binY) * p - lift;
       }
       ctx.save(); ctx.translate(x, y);
-      const near = stop.state === "waiting" && Math.hypot(stop.x-game.truck.x, stop.y-game.truck.y) < 74;
+      const actor = actorPosition();
+      const near = game.mode === "foot" && Math.hypot(stop.binX-actor.x, stop.binY-actor.y) < 42;
       ctx.fillStyle="rgba(0,0,0,.48)";ctx.beginPath();ctx.ellipse(3,17,18,7,0,0,Math.PI*2);ctx.fill();
       if(near){ctx.strokeStyle="#e99b32";ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(0,0,22+Math.sin(performance.now()/160)*2,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
-      ctx.fillStyle=stop.state==="tagged"?"#713a32":"#283d35";ctx.fillRect(-12,-14,24,29);
+      ctx.fillStyle=stop.state==="empty"?"#34463d":stop.state==="authorized"?"#365744":"#283d35";ctx.fillRect(-12,-14,24,29);
       ctx.fillStyle="#121917";ctx.fillRect(-15,-18,30,6);ctx.fillStyle="#526356";ctx.fillRect(-10,-11,3,20);
       ctx.fillStyle="#080a0b";ctx.beginPath();ctx.arc(-9,17,4,0,Math.PI*2);ctx.arc(9,17,4,0,Math.PI*2);ctx.fill();
       ctx.fillStyle="#8b8c80";ctx.fillRect(-5,-5,10,8);ctx.fillStyle="#333832";ctx.fillRect(-3,-3,6,4);
-      if(stop.state==="tagged"){ctx.fillStyle="#df9a3b";ctx.fillRect(11,-8,8,13);ctx.fillStyle="#20160d";ctx.fillRect(13,-5,4,1);}
       if(near){ctx.fillStyle="rgba(8,10,12,.9)";ctx.fillRect(-43,-34,86,14);ctx.strokeStyle="#78562f";ctx.strokeRect(-43,-34,86,14);ctx.fillStyle="#e5ad58";ctx.font="bold 9px Courier New";ctx.textAlign="center";ctx.fillText(stop.label.toUpperCase(),0,-24);ctx.textAlign="left";}
       ctx.restore();
     }
@@ -576,6 +739,19 @@
     ctx.restore();
   }
 
+  function drawWorker() {
+    if (game.mode !== "foot") return;
+    const w=game.worker;ctx.save();ctx.translate(w.x,w.y);ctx.rotate(w.angle);
+    if(w.stumble>0)ctx.rotate(Math.sin(performance.now()/45)*.55);
+    ctx.fillStyle="rgba(0,0,0,.55)";ctx.beginPath();ctx.ellipse(-2,10,12,6,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#101614";ctx.fillRect(-8,5,6,12);ctx.fillRect(3,5,6,12);
+    ctx.fillStyle="#294036";ctx.fillRect(-10,-12,20,21);ctx.fillStyle="#c48b32";ctx.fillRect(-10,-3,20,3);ctx.fillStyle="#b8b29c";ctx.fillRect(-8,-8,16,2);
+    ctx.fillStyle="#76503b";ctx.beginPath();ctx.arc(0,-18,7,0,Math.PI*2);ctx.fill();ctx.fillStyle="#1a2420";ctx.fillRect(-7,-23,14,5);
+    ctx.fillStyle="#d39a3b";ctx.fillRect(6,-22,6,2);
+    if(w.grabbedStop){ctx.strokeStyle="#b7b09c";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-7,-4);ctx.lineTo(-18,2);ctx.moveTo(7,-4);ctx.lineTo(-18,7);ctx.stroke();}
+    ctx.restore();
+  }
+
   function drawParticles() { ctx.fillStyle="#352f25"; for (const p of game.particles) ctx.fillRect(p.x,p.y,p.size,p.size); }
 
   function drawSpills() {
@@ -584,7 +760,7 @@
       ctx.save(); ctx.translate(spill.x, spill.y);
       ctx.fillStyle="rgba(28,24,20,.9)";
       [[-18,-8,8],[0,3,10],[15,-6,6],[-5,-15,5],[20,10,4]].forEach(([x,y,r]) => { ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); });
-      const near = Math.hypot(spill.x-game.truck.x, spill.y-game.truck.y) < 68;
+      const actor=actorPosition();const near = game.mode==="foot"&&Math.hypot(spill.x-actor.x, spill.y-actor.y) < 48;
       ctx.strokeStyle=near?"#e99b32":"#8e3e31";ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(0,0,31,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
       ctx.fillStyle="rgba(8,10,12,.9)";ctx.fillRect(-35,-47,70,14);ctx.fillStyle=near?"#e9ad53":"#a85b4b";ctx.font="bold 9px Courier New";ctx.textAlign="center";ctx.fillText(near?"X // CLEAN":"ROAD HAZARD",0,-37);ctx.textAlign="left";ctx.restore();
     }
@@ -611,11 +787,15 @@
     if (game.phase === "LOAD") return "HOLD SPACE · A/D BALANCE THE BIN";
     if (game.phase !== "DRIVE") return "";
     const nearbySpill = nearestSpill();
-    if (nearbySpill.spill && nearbySpill.distance <= 68) return Math.abs(game.truck.speed) > 18 ? "BRAKE TO CLEAN SPILL" : "X · CLEAN SPILL";
-    const nearbyStop = nearestStop();
-    if (nearbyStop.stop && nearbyStop.distance <= 74) return Math.abs(game.truck.speed) > 22 ? "BRAKE TO SERVICE STOP" : `SPACE · INSPECT ${nearbyStop.stop.label.toUpperCase()}`;
+    if(game.mode==="truck") return Math.abs(game.truck.speed)>10?"BRAKE · F TO EXIT CAB":"F · EXIT CAB   C · COMPACT";
+    const w=game.worker;
+    if(nearbySpill.spill&&nearbySpill.distance<=48&&!w.grabbedStop)return"X · CLEAN SPILL";
+    if(w.grabbedStop){const stop=game.stops.find(s=>s.id===w.grabbedStop);if(stop?.state==="authorized"){const h=hopperPosition();return Math.hypot(stop.binX-h.x,stop.binY-h.y)<=48?"SPACE · LOAD HOPPER":"WHEEL BIN TO REAR HOPPER";}if(stop?.state==="empty")return Math.hypot(stop.binX-stop.x,stop.binY-stop.y)<=42?"SPACE · RETURN BIN":"WHEEL BIN TO AMBER MARKER";}
+    if(Math.hypot(w.x-game.truck.x,w.y-game.truck.y)<=60)return"F · ENTER CAB";
+    const nearbyStop = nearestStop(w);
+    if(nearbyStop.stop&&nearbyStop.distance<=40)return nearbyStop.stop.state==="waiting"?`SPACE · INSPECT ${nearbyStop.stop.label.toUpperCase()}`:"E · GRAB BIN";
     if (game.loose >= 3 && Math.abs(game.truck.speed) <= 18) return "C · COMPACT LOOSE LOAD";
-    return "WASD / ARROWS · DRIVE   P · PAUSE";
+    return "WASD / ARROWS · WALK   E · GRAB/DROP";
   }
 
   function drawHUD() {
@@ -645,7 +825,8 @@
     const { spill } = nearestSpill();
     const target = stop || spill;
     if (!target) return;
-    const angle = Math.atan2(target.y-game.truck.y, target.x-game.truck.x);
+    const actor=actorPosition();const tx=stop?stop.binX:target.x;const ty=stop?stop.binY:target.y;
+    const angle = Math.atan2(ty-actor.y, tx-actor.x);
     ctx.save();ctx.translate(900,113);ctx.rotate(angle);ctx.fillStyle="#e99b32";ctx.beginPath();ctx.moveTo(16,0);ctx.lineTo(-10,-8);ctx.lineTo(-4,0);ctx.lineTo(-10,8);ctx.closePath();ctx.fill();ctx.restore();
     ctx.fillStyle="#9a682f";ctx.font="bold 9px Courier New";ctx.textAlign="right";ctx.fillText(stop?stop.label.toUpperCase():"SPILL CLEANUP",870,116);ctx.textAlign="left";
   }
@@ -677,8 +858,9 @@
     if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(event.code)) event.preventDefault();
     keys.add(event.code);
     if (event.repeat) return;
-    if (event.code === "Space") inspectStop();
-    if (event.code === "KeyE") collectActive();
+    if (event.code === "Space") handleSpaceAction();
+    if (event.code === "KeyE") game.phase === "INSPECT" ? collectActive() : toggleGrab();
+    if (event.code === "KeyF") exitEnterTruck();
     if (event.code === "KeyR") tagActive();
     if (event.code === "KeyQ") inspectCloser();
     if (event.code === "KeyC") compact();

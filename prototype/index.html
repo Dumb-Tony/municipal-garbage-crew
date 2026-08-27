@@ -10,7 +10,7 @@
   <meta property="og:image" content="https://dumb-tony.github.io/municipal-garbage-crew/prototype/assets/bellwether-noir-title-v2.png">
   <meta name="twitter:card" content="summary_large_image">
   <title>Municipal Garbage Crew — First Route</title>
-  <link rel="stylesheet" href="styles.css?v=0.5.0">
+  <link rel="stylesheet" href="styles.css?v=0.6.0">
 </head>
 <body>
   <main class="shell">
@@ -23,15 +23,16 @@
     </header>
 
     <section class="game-frame" aria-label="Playable garbage collection route">
-      <canvas id="game" width="960" height="600" tabindex="0" aria-label="Top-down driving game. Use WASD or arrow keys to drive, Space to inspect a bin, E to collect, R to tag contaminated waste, Q to inspect uncertain waste, X to clean spills, and C to compact."></canvas>
+      <canvas id="game" width="960" height="600" tabindex="0" aria-label="Top-down sanitation game. Use WASD or arrow keys to drive and walk, F to enter or exit the truck, Space for contextual work, E to grab or release bins, R to tag contaminated waste, Q to inspect uncertain waste, X to clean spills, and C to compact."></canvas>
       <div id="startPanel" class="overlay-card">
         <p class="stamp">ROUTE 04 · EAST BELLWETHER</p>
         <h2>Black ice.<br>Six stops.<br>One working compactor.</h2>
         <p class="briefing">The complaints started before dawn. Clear Maple before rush hour, watch the hopper, and do not give the mayor another reason to call.</p>
         <div class="control-grid" aria-label="Controls">
-          <span><b>WASD / Arrows</b> Drive</span>
-          <span><b>Space</b> Inspect stop</span>
-          <span><b>E / R / Q</b> Collect / tag / check</span>
+          <span><b>WASD / Arrows</b> Drive / walk</span>
+          <span><b>F</b> Exit / enter truck</span>
+          <span><b>Space</b> Inspect / load / return</span>
+          <span><b>E / R / Q</b> Grab / tag / check</span>
           <span><b>C / X</b> Compact / clean spill</span>
           <span><b>Hold Space + A/D</b> Lift / balance bin</span>
         </div>
@@ -64,11 +65,11 @@
     </section>
 
     <footer class="footer-note">
-      <span>BUILD 0.5.0 // VISUAL TARGET</span>
+      <span>BUILD 0.6.0 // HANDS-ON ROUTE</span>
       <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
       <div class="footer-actions"><button id="pauseButton" class="text-button" type="button">Pause</button><button id="muteButton" class="text-button" type="button" aria-pressed="false">Sound: on</button></div>
     </footer>
   </main>
-  <script src="game.js?v=0.5.0" defer></script>
+  <script src="game.js?v=0.6.0" defer></script>
 </body>
 </html>

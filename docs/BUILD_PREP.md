@@ -21,7 +21,7 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | PS2-era urban-noir presentation target | Cohesive title, world, weather, vehicle, HUD, overlay, and social-preview art direction | L | Current slice |
 | P0 | Remappable input/gamepad layer | Device-independent actions | M | Current input |
 | P0 | Five-person usability playtest | Evidence for M0 decision | S | Current slice |
-| P1 | On-foot loader greybox | Validate walk/grab/tilt/tip | L | Input abstraction |
+| Done | On-foot loader foundation | Exit/enter, walk, grab/release, wheel, load, return | L | Current input |
 | P1 | Container physics model | Mass, wheels, grip, integrity, tip state | L | Loader greybox |
 | P1 | One bag and rupture/cleanup | Core systemic comedy/recovery | M | Container physics |
 | P1 | Truck safe-move interlock | Driver/loader coordination | M | Loader greybox |
@@ -98,13 +98,16 @@ One polished district, three job variants, 2–5 players, join/reconnect, comple
 |---|---|---|
 | Accelerate / reverse | W/S or Up/Down | Speed changes gradually; release applies drag |
 | Steer | A/D or Left/Right | Steering scales with speed and reverses naturally |
-| Inspect nearest stop | Space | Must be within 74 px and moving ≤22 px/s |
+| Drive / walk | W/S/A/D or arrows | Controls the truck in cab mode and the worker in street mode |
+| Exit / enter truck | F | Truck must be nearly stopped; worker must be near cab and not holding a bin |
+| Contextual work | Space | On foot: inspect nearby waiting bin, load at hopper, or return empty bin at curb |
 | Check uncertain contents | Q or button | Inspection open on obscured load; costs five route seconds |
-| Collect | E or button | Inspection open; refuses if projected capacity >8 |
+| Authorize collection | E or button | Inspection open; closes the decision and enables physical bin handling |
+| Grab / release bin | E | On foot within reach; waiting bins must be inspected first |
 | Lift and balance bin | Hold Space + A/D or Left/Right | Load phase; holding advances lift, steering keys counter lateral sway; excessive sway causes a recoverable slip |
 | Tag and leave | R or button | Inspection open; correct for contamination, complaint otherwise |
 | Compact | C | Drive phase, speed ≤18, loose load present, cooldown clear |
-| Clean spill | X | Within 68 px, speed ≤18; costs three seconds and recovers score |
+| Clean spill | X | On foot within 48 px; costs three seconds and recovers score |
 | Pause/resume | P or button | Freezes route clock and traffic; focus loss pauses automatically |
 | Restart | Enter or button | Results only |
 | Mute | M or button | Any phase; Web Audio remains optional |
@@ -117,9 +120,13 @@ Next input layer should emit named actions independent of devices, support remap
 
 ```text
 READY --ClockIn--> DRIVE
-DRIVE --Inspect(valid proximity/speed)--> INSPECT
-INSPECT --Collect(capacity available)--> LOAD --animation complete--> DRIVE
-INSPECT --Collect(over capacity)--> DRIVE
+DRIVE/truck --F(stopped)--> DRIVE/foot
+DRIVE/foot --F(near cab, empty hands)--> DRIVE/truck
+DRIVE/foot --Inspect(valid proximity)--> INSPECT
+INSPECT --Authorize--> DRIVE/foot
+DRIVE/foot --Grab + move to hopper + Space(capacity available)--> LOAD
+LOAD --animation complete--> DRIVE/foot
+DRIVE/foot --Grab empty + return + Space--> resolved
 INSPECT --Tag--> DRIVE
 DRIVE --Compact(valid interlocks)--> COMPACT --cycle complete--> DRIVE
 Any active state --time zero--> RESULT
@@ -127,13 +134,14 @@ DRIVE --all stops resolved--> RESULT
 RESULT --Restart--> READY/DRIVE
 ```
 
-Only `DRIVE` updates truck input. Traffic and shift time update during `DRIVE`, `INSPECT`, `LOAD`, and `COMPACT`; time pressure therefore continues while deciding and handling. Results and ready states freeze the simulation.
+Only `DRIVE/truck` updates truck input; `DRIVE/foot` updates worker movement and bin following. Traffic and shift time update during all active phases, so pressure continues while deciding and handling. Results and ready states freeze the simulation.
 
 ### Stop state
 
 ```text
-waiting --inspect--> waiting (shift enters INSPECT)
-waiting --collect--> loading --complete--> collected
+waiting --inspect/authorize--> authorized
+authorized --grab/move/load--> loading --complete--> empty
+empty --grab/return--> collected
 waiting --tag--> tagged
 ```
 
@@ -145,9 +153,9 @@ Truck movement is data-driven by position, angle, speed, stun time, and collisio
 
 ### Interaction invariants
 
-- One active stop maximum.
+- One active stop and one physically grabbed bin maximum.
 - One load animation maximum.
-- A resolved stop never re-enters inspection.
+- A collected/tagged stop never re-enters inspection; an emptied bin remains unresolved until returned.
 - Cargo never exceeds capacity through collection.
 - Results execute once and own final score calculation.
 - Presentation effects never authoritatively change route state.
@@ -209,8 +217,11 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Open directly from disk; title/start card appear.
 - [ ] Clock in by click; Canvas receives focus.
 - [ ] Drive with both WASD and arrow controls.
-- [ ] Try Space while moving and far away; reason is shown.
-- [ ] Collect a valid stop; loading animation completes exactly once.
+- [ ] Stop, press F, and confirm the worker appears safely at the truck rear; walk with both key sets.
+- [ ] Try Space from the cab and while far from a bin; the next step is stated.
+- [ ] Inspect and authorize a valid stop; confirm it remains unresolved until physically serviced.
+- [ ] Grab/release with E; wheel the bin to the hopper; loading begins only within range.
+- [ ] Empty a valid bin; grab it again, return it to its amber marker, and confirm the stop resolves exactly once.
 - [ ] Release Space during loading; progress waits. Counter sway in both directions and complete the lift.
 - [ ] Allow the balance marker to escape the safe range; one slip and one penalty are recorded, then handling remains recoverable.
 - [ ] Start a fresh shift and remain stationary for five seconds; no spawn collision or damage occurs.
@@ -219,6 +230,7 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Fill near capacity; attempt over-capacity load; compact while stopped; retry successfully.
 - [ ] Attempt compaction while moving and during cooldown.
 - [ ] Hit traffic and blocked car; damage increments once per impact, not every frame.
+- [ ] Let traffic touch the on-foot worker; confirm a brief stumble/drop and time penalty occur without death or reset.
 - [ ] Cause/observe spill across repeated collisions with loose load; return, stop, and clean it with X.
 - [ ] Resolve all stops; results match counters.
 - [ ] Let timer expire with unresolved stops; each becomes a complaint in results.
@@ -246,15 +258,16 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (manual in 0.5.0)
+### Playtest telemetry (manual in 0.6.0)
 
 Record: shift seed, time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, event count, restart choice, and a one-sentence causal account of the worst mistake.
 
 ## Explicit next implementation tasks
 
-1. Move remaining live score mutations into event reducers and add rule tests for score idempotence.
-2. Add an action-map layer with remapping and gamepad support.
-3. Add a short cleanup animation/state and finite spill-kit resource.
-4. Extract pure rules into modules and write tests for cargo invariants, stop transitions, timeout, and score idempotence.
-5. Tune route time, stop radius, vehicle steering, traffic speed, weights, and score from five observed playtests.
-6. Decide M0 pass/revise based on exit gate; only then start the browser tactile sandbox.
+1. Add physical loose bags and one oversized object with carry/drop states, weight differences, bag rupture, debris, and cleanup recovery.
+2. Expand the route into a scrolling district with intersections, route-order choice, moving traffic, parked access conflicts, and an end-of-route depot return.
+3. Add layered engine, idle, reverse alarm, brake, bin, compactor, weather, and neighborhood audio with category controls.
+4. Add versioned local saves for address outcomes, complaints, route familiarity, depot state, and one meaningful upgrade choice.
+5. Tune the forgiving solo loop through observed playtests, then fix clarity and pacing before adding network code.
+6. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
+7. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo and stop-state invariants.

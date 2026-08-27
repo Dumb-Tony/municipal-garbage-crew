@@ -1,7 +1,7 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.5.0
-**Last updated:** 2026-08-25  
+**Status:** Active preproduction / browser slice 0.6.0
+**Last updated:** 2026-08-27
 **Product direction:** browser-first stylized game; solo now, cooperative expansion evaluated after the core route is proven
 **Current proof:** standalone 2D Canvas prototype, solo, no build step
 
@@ -216,16 +216,19 @@ Scoring has independent service, safety, cleanliness, compliance, and time dimen
 
 Test whether one route creates meaningful tension between safe handling, contamination judgment, capacity, positioning, and time—and whether mistakes remain legible and funny enough to invite a retry.
 
-### Included through 0.5.0
+### Included through 0.6.0
 
 - One-screen Maple Street route with six stops.
 - Top-down drivable rear-loader with momentum, steering, boundaries, and damage collisions.
-- Stop proximity and speed gating; player-controlled bin loading that requires holding the lift and countering deterministic lateral sway.
+- Keyboard-controlled cab/street switching, on-foot walking, physical bin grabbing/releasing, curb-to-hopper transport, and empty-bin return.
+- Stop inspection requires approaching on foot; a service decision authorizes the physical work instead of instantly collecting the stop.
+- Player-controlled bin loading requires holding the lift and countering deterministic lateral sway; a stop resolves only after the empty bin returns to its address.
+- Forgiving traffic impacts make the worker stumble, drop the bin, and lose a little time without death, reset, or an unrecoverable state.
 - Two contaminated loads: one obvious and one uncertain until a five-second closer inspection.
 - Loose and compacted capacity, compactor stop interlock, cooldown, and capacity pressure.
 - Two moving traffic cars and one blocked-curb obstacle.
 - Loose-load spill chance on collision, persistent cleanup zones, time-cost recovery action, damage and score penalties.
-- 180-second shift, next-action guidance, scoring, missed-stop/complaint consequences, itemized results, pause, restart, and minimal generated audio.
+- 300-second shift tuned for the longer hands-on loop, mode-aware next-action guidance, scoring, missed-stop/complaint consequences, itemized results, pause, restart, and minimal generated audio.
 - Deterministic shift seed, deterministic spill checks, and a structured event ledger covering route decisions and consequences.
 - Corrected front-facing truck silhouette with cab, windshield, headlights, and explicit forward marker.
 - Safe road-aligned spawn, road-only movement bounds, and lane-sensitive collision envelopes verified against the initial traffic positions.
@@ -233,7 +236,7 @@ Test whether one route creates meaningful tension between safe handling, contami
 
 ### Explicitly deferred
 
-On-foot avatar, direct grab physics, multiple waste objects per bin, multiplayer/networking, procedural layouts, persistence, upgrades, resident actors, and touch/gamepad controls. These are not required to validate the first decision loop.
+Individual bags, oversized waste, multi-object container contents, scrolling routes, multiplayer/networking, procedural layouts, persistence, upgrades, resident actors, and touch/gamepad controls remain deferred. The next implementation milestone adds physical waste and recoverable rupture/spill behavior to the on-foot foundation.
 
 ## 16. Technical approach
 
@@ -245,7 +248,7 @@ The current implementation is intentionally one script for frictionless delivery
 
 ### Data and state architecture
 
-The authoritative shift state contains phase, route clock, score ledger, truck state/cargo, stops, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Definitions (stop templates, truck tuning, contamination rules) remain separate from runtime instances. The 0.5.0 prototype records major route and handling events and presents an itemized final score; remaining live score mutations should move behind named commands/events (`InspectStop`, `CollectLoad`, `Compact`, `Collision`, `ResolveStop`) so replays, networking, analytics, and tests can observe the same decisions.
+The authoritative shift state contains phase, control mode, worker and truck state, route clock, score ledger, cargo, stop/bin positions and states, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Stops now progress through `waiting → authorized → loading → empty → collected`, with `tagged` as the alternate terminal state. Definitions remain separate from runtime instances. The 0.6.0 prototype records major movement handoffs, handling events, route decisions, and consequences; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
 
 Long-term persistence layers:
 
@@ -268,8 +271,8 @@ Save files should be versioned, migrated, and never store scene object reference
 
 ## 17. Milestones
 
-- **M0 — Route proof (current):** solo browser loop, six stops, decisions, capacity, hazards, scoring.
-- **M1 — Tactile proof:** on-foot loader, grab/tilt/tip one bin, individual bag, spill recovery, better collision rules.
+- **M0 — Route proof (complete foundation):** solo browser loop, six stops, decisions, capacity, hazards, scoring.
+- **M1 — Tactile proof (current):** on-foot loader and full bin service loop implemented; next add individual bags, oversized waste, rupture/spill recovery, and better collision rules.
 - **M2 — Cooperation proof:** two-player greybox, driver/loader handoff, safe-move call, shared bin, hopper operator.
 - **M3 — Browser route expansion:** a second authored Bellwether block, 8–12 variable stops, richer traffic, results and replay seed.
 - **M4 — Progression proof:** depot, three shifts, persistent addresses, truck/tool upgrade, complaint recovery.
@@ -306,7 +309,7 @@ Exit criteria and task ordering are in `BUILD_PREP.md`.
 
 ### Open questions to test
 
-1. Is driving plus contextual curb interaction satisfying enough before on-foot handling exists?
+1. Does exiting the cab and returning every empty bin add satisfying work rhythm, or too much repetition?
 2. Does contamination produce judgment or merely an obvious correct answer? Test ambiguous/mixed cases next.
 3. How much capacity information should be exact versus physical/approximate?
 4. Can the driver remain engaged during longer loading and cleanup tasks?
@@ -317,10 +320,13 @@ Exit criteria and task ordering are in `BUILD_PREP.md`.
 
 ## 20. Next implementation tasks
 
-1. Run five short playtests of 0.5.0; record completion rate, first intentional service, handling slips, first collision, compactor use, decision errors, spill recovery, visual readability, and whether players retry.
-2. Move remaining score mutations into event reducers; the 0.3 report is auditable, but the reducer remains the replay-safe architecture target.
-3. Add keyboard remapping and gamepad input abstraction.
-4. Add a short animated cleanup state and limited cleanup-kit supply to deepen spill recovery.
-5. Split simulation, input, renderer, audio, content, and UI modules; add rule tests.
-6. Build the M1 browser handling sandbox: one loader, one wheeled bin, one hopper, one bag, and one curb using the established noir visual language.
-7. Schedule sanitation-worker interviews before locking handling, terminology, safety procedures, or consequence tone.
+The active sequence is intentionally solo-first and will be completed in this order:
+
+1. Add physical loose bags and one oversized item with readable mass, awkward movement, drops, rupture, and recoverable cleanup.
+2. Expand Maple into a scrolling multi-screen route with intersections, alternate stop order, parked-access obstacles, and stronger route planning.
+3. Add layered truck engine/idle/reverse/compactor sounds and neighborhood ambience with independent volume controls.
+4. Add versioned local persistence for address history, complaints, depot return, and a small truck/tool upgrade choice.
+5. Run and tune repeated solo playtests for interaction clarity, forgiving chaos, route duration, and voluntary retry.
+6. Only after the solo loop passes, build a minimal two-player authority/role test and make an evidence-based multiplayer go/no-go decision.
+
+Cross-cutting work: move score mutations into event reducers, add named input actions/remapping, split simulation/render/audio/persistence modules when route expansion begins, and schedule sanitation-worker interviews before locking handling or consequence tone.

@@ -8,7 +8,7 @@ A living design package and standalone browser vertical slice for a tactile, sys
 
 Open `prototype/index.html` in a modern desktop browser. No install, server, or build step is required.
 
-Drive with **WASD** or **arrow keys**. Stop beside a highlighted curb bin and press **Space** to inspect it. Press **E** to collect, **R** to tag and skip contaminated waste, and **Q** to examine uncertain contents. While loading, hold **Space** and counter the bin's sway with **A/D** or the arrow keys. Press **C** to compact while stopped, **X** to clean a nearby spill, and **P** to pause. Press **M** to mute and **Enter** to restart after a shift.
+Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F** to exit the truck. On foot, press **Space** to inspect, **E** to grab or release a bin, then wheel it to the rear hopper. Hold **Space** and counter its sway with **A/D** while loading; grab the empty bin and return it to the amber curb marker. Use **R** to tag contamination, **Q** to check uncertain waste, **C** to compact, **X** to clean spills, and **P** to pause.
 
 ## Project map
 
@@ -20,7 +20,7 @@ Drive with **WASD** or **arrow keys**. Stop beside a highlighted curb bin and pr
 
 ## Current slice
 
-Version `0.5.0` establishes the production visual target: an original early-2000s-console urban-noir Bellwether with a cinematic title screen, frozen brick district, wet-road reflections, slush, fire escapes, storefront light, steam, sleet, chunky vehicles, and a diegetic sanitation-authority HUD. The game remains browser-first; Unity is no longer part of the plan.
+Version `0.6.0` adds the first complete hands-on service loop to the established early-2000s-console urban-noir visual target. The player now leaves the cab, walks the street, inspects and wheels physical bins, loads them at the rear hopper, survives recoverable traffic stumbles, and must return each empty bin before the address counts as serviced. The game remains browser-first; Unity is not part of the plan.
 
 ## Repository and publishing policy
 
