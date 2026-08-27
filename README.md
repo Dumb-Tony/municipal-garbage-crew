@@ -20,7 +20,7 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.8.0` expands the hands-on route into three scrolling Maple District blocks with ten freely ordered stops, a camera-following world, an always-visible route strip, two drivable cross streets, cross traffic, several blocked curbs, and a lane-blocking utility chicane. The fragile bag, soaked mattress, physical bin work, contamination, capacity, compaction, and recoverable chaos remain integrated across the longer route. The game remains browser-first; Unity is not part of the plan.
+Version `0.9.0` gives the Maple District a responsive night-shift soundscape. Engine idle, load and pitch follow the truck; reversing, compaction, footsteps, carried weight, nearby traffic, winter wind, and electrical street hum create layered feedback. An accessible Audio Mix panel independently controls Truck, Street, and Effects buses, with global mute still available. The three-block route, ten stops, physical waste, contamination, capacity, and recoverable chaos remain integrated. The game remains browser-first; Unity is not part of the plan.
 
 ## Repository and publishing policy
 

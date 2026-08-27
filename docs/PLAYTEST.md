@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.8.0
+**Build:** 0.9.0
 **Tester:**  
 **Date / browser:**  
 
@@ -18,6 +18,9 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Route order chosen / backtracking:
 - Cross-street or roadwork collisions:
 - Did the route strip explain all three blocks?
+- Could they identify engine load, reversing, compaction, footsteps, and nearby traffic by sound?
+- Audio fatigue or unclear/overpowering layer:
+- Did they discover and understand the Truck / Street / Effects mixer?
 - First visible confusion:
 - Compactor attempts / successes:
 - Bin handling slips / most difficult lift:

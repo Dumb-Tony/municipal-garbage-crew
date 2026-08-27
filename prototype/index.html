@@ -10,7 +10,7 @@
   <meta property="og:image" content="https://dumb-tony.github.io/municipal-garbage-crew/prototype/assets/bellwether-noir-title-v2.png">
   <meta name="twitter:card" content="summary_large_image">
   <title>Municipal Garbage Crew — First Route</title>
-  <link rel="stylesheet" href="styles.css?v=0.8.0">
+  <link rel="stylesheet" href="styles.css?v=0.9.0">
 </head>
 <body>
   <main class="shell">
@@ -66,11 +66,23 @@
     </section>
 
     <footer class="footer-note">
-      <span>BUILD 0.8.0 // MAPLE DISTRICT</span>
+      <span>BUILD 0.9.0 // NIGHT-SHIFT MIX</span>
       <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
-      <div class="footer-actions"><button id="pauseButton" class="text-button" type="button">Pause</button><button id="muteButton" class="text-button" type="button" aria-pressed="false">Sound: on</button></div>
+      <div class="footer-actions">
+        <details class="audio-mixer">
+          <summary>Audio mix</summary>
+          <div class="audio-mixer-panel">
+            <label>Truck <input id="vehicleVolume" type="range" min="0" max="100" value="72"></label>
+            <label>Street <input id="streetVolume" type="range" min="0" max="100" value="55"></label>
+            <label>Effects <input id="effectsVolume" type="range" min="0" max="100" value="78"></label>
+            <output id="audioStatus" aria-live="polite">Starts when route begins</output>
+          </div>
+        </details>
+        <button id="pauseButton" class="text-button" type="button">Pause</button>
+        <button id="muteButton" class="text-button" type="button" aria-pressed="false">Sound: on</button>
+      </div>
     </footer>
   </main>
-  <script src="game.js?v=0.8.0" defer></script>
+  <script src="game.js?v=0.9.0" defer></script>
 </body>
 </html>

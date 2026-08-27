@@ -16,7 +16,11 @@
     resultStats: document.querySelector("#resultStats"),
     resultLedger: document.querySelector("#resultLedger"),
     status: document.querySelector("#statusText"),
-    mute: document.querySelector("#muteButton")
+    mute: document.querySelector("#muteButton"),
+    audioStatus: document.querySelector("#audioStatus"),
+    vehicleVolume: document.querySelector("#vehicleVolume"),
+    streetVolume: document.querySelector("#streetVolume"),
+    effectsVolume: document.querySelector("#effectsVolume")
   };
 
   const W = canvas.width;
@@ -122,24 +126,88 @@
     game.events.push({ type, at: Number((SHIFT_DURATION - game.time).toFixed(2)), ...details });
   }
 
-  function beep(frequency = 220, duration = .08, type = "square", volume = .035) {
-    if (muted) return;
+  function ensureAudio() {
+    if (audio) { if (audio.context.state === "suspended") audio.context.resume().catch(()=>{}); return audio; }
     try {
-      audio ||= new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audio.createOscillator();
-      const gain = audio.createGain();
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+      const context = new AudioContext();
+      const master = context.createGain();
+      const vehicle = context.createGain();
+      const street = context.createGain();
+      const effects = context.createGain();
+      vehicle.connect(master); street.connect(master); effects.connect(master); master.connect(context.destination);
+
+      const engineGain = context.createGain();
+      const engineFilter = context.createBiquadFilter();
+      engineFilter.type = "lowpass"; engineFilter.frequency.value = 230;
+      const engine = context.createOscillator(); engine.type = "sawtooth"; engine.frequency.value = 42;
+      const engineSub = context.createOscillator(); engineSub.type = "triangle"; engineSub.frequency.value = 21;
+      engine.connect(engineFilter); engineSub.connect(engineFilter); engineFilter.connect(engineGain).connect(vehicle); engineGain.gain.value = 0;
+      engine.start(); engineSub.start();
+
+      const compactorGain = context.createGain();
+      const compactorFilter = context.createBiquadFilter(); compactorFilter.type="lowpass";compactorFilter.frequency.value=150;
+      const compactor = context.createOscillator(); compactor.type="square";compactor.frequency.value=31;
+      compactor.connect(compactorFilter).connect(compactorGain).connect(vehicle);compactorGain.gain.value=0;compactor.start();
+
+      const noiseBuffer=context.createBuffer(1,context.sampleRate*2,context.sampleRate);const noise=noiseBuffer.getChannelData(0);for(let i=0;i<noise.length;i++)noise[i]=(Math.random()*2-1)*.55;
+      const wind=context.createBufferSource();wind.buffer=noiseBuffer;wind.loop=true;
+      const windFilter=context.createBiquadFilter();windFilter.type="bandpass";windFilter.frequency.value=520;windFilter.Q.value=.45;
+      const windGain=context.createGain();windGain.gain.value=0;wind.connect(windFilter).connect(windGain).connect(street);wind.start();
+      const hum=context.createOscillator();hum.type="sine";hum.frequency.value=58;
+      const humGain=context.createGain();humGain.gain.value=0;hum.connect(humGain).connect(street);hum.start();
+
+      audio={context,buses:{master,vehicle,street,effects},nodes:{engine,engineSub,engineFilter,engineGain,compactorGain,windGain,humGain},reverseTimer:0,brakeTimer:0,footstepTimer:0,trafficTimer:0,neighborhoodTimer:7};
+      ui.audioStatus.textContent="Active // 3 buses";
+      syncAudioMix();
+      return audio;
+    } catch (_) { ui.audioStatus.textContent="Audio unavailable // game unaffected";return null; }
+  }
+
+  function syncAudioMix() {
+    if (!audio) return;
+    const now=audio.context.currentTime;
+    audio.buses.master.gain.setTargetAtTime(muted?0:1,now,.025);
+    audio.buses.vehicle.gain.setTargetAtTime(Number(ui.vehicleVolume.value)/100,now,.025);
+    audio.buses.street.gain.setTargetAtTime(Number(ui.streetVolume.value)/100,now,.025);
+    audio.buses.effects.gain.setTargetAtTime(Number(ui.effectsVolume.value)/100,now,.025);
+  }
+
+  function beep(frequency = 220, duration = .08, type = "square", volume = .035, bus = "effects") {
+    if (muted) return;
+    const system=ensureAudio();if(!system)return;
+    try {
+      const oscillator = system.context.createOscillator();
+      const gain = system.context.createGain();
       oscillator.type = type;
       oscillator.frequency.value = frequency;
-      gain.gain.setValueAtTime(volume, audio.currentTime);
-      gain.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + duration);
-      oscillator.connect(gain).connect(audio.destination);
-      oscillator.start();
-      oscillator.stop(audio.currentTime + duration);
-    } catch (_) { /* Audio is optional. */ }
+      gain.gain.setValueAtTime(Math.max(.0001,volume), system.context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.0001, system.context.currentTime + duration);
+      oscillator.connect(gain).connect(system.buses[bus]||system.buses.effects);
+      oscillator.start(); oscillator.stop(system.context.currentTime + duration);
+    } catch (_) { /* Audio remains optional. */ }
+  }
+
+  function updateAudio(dt){
+    if(!audio||!game)return;
+    const now=audio.context.currentTime;const active=!["READY","RESULT","PAUSED"].includes(game.phase);const speed=Math.abs(game.truck.speed);
+    audio.nodes.engine.frequency.setTargetAtTime(40+speed*.72,now,.06);audio.nodes.engineSub.frequency.setTargetAtTime(20+speed*.34,now,.08);audio.nodes.engineFilter.frequency.setTargetAtTime(175+speed*2.3,now,.08);
+    audio.nodes.engineGain.gain.setTargetAtTime(active?(.018+speed*.00022):0,now,.12);
+    audio.nodes.compactorGain.gain.setTargetAtTime(game.phase==="COMPACT"?.055:0,now,.035);
+    audio.nodes.windGain.gain.setTargetAtTime(active?.038:0,now,.35);audio.nodes.humGain.gain.setTargetAtTime(active?.006:0,now,.4);
+
+    audio.reverseTimer-=dt;if(active&&game.mode==="truck"&&game.truck.speed<-8&&audio.reverseTimer<=0){beep(860,.09,"square",.045,"vehicle");audio.reverseTimer=.52;}
+    audio.brakeTimer-=dt;const braking=game.mode==="truck"&&((game.truck.speed>18&&(keys.has("KeyS")||keys.has("ArrowDown")))||(game.truck.speed<-18&&(keys.has("KeyW")||keys.has("ArrowUp"))));if(active&&braking&&audio.brakeTimer<=0){beep(118,.11,"sawtooth",.018,"vehicle");audio.brakeTimer=.28;}
+    const walking=game.mode==="foot"&&game.phase==="DRIVE"&&(keys.has("KeyW")||keys.has("KeyA")||keys.has("KeyS")||keys.has("KeyD")||keys.has("ArrowUp")||keys.has("ArrowDown")||keys.has("ArrowLeft")||keys.has("ArrowRight"));
+    audio.footstepTimer-=dt;if(walking&&audio.footstepTimer<=0){beep(game.worker.grabbedWaste?82:96,.045,"triangle",.012,"effects");audio.footstepTimer=game.worker.grabbedWaste?.42:.31;}
+    audio.trafficTimer-=dt;if(active&&audio.trafficTimer<=0){const near=game.traffic.some(car=>Math.hypot(car.x-actorPosition().x,car.y-actorPosition().y)<105);if(near){beep(72,.18,"sine",.011,"street");audio.trafficTimer=.7;}}
+    audio.neighborhoodTimer-=dt;if(active&&audio.neighborhoodTimer<=0){beep(245,.28,"sine",.006,"street");setTimeout(()=>beep(205,.32,"sine",.005,"street"),170);audio.neighborhoodTimer=9+Math.random()*7;}
   }
 
   function startGame() {
     if (game.phase !== "READY") return;
+    ensureAudio();
     game.phase = "DRIVE";
     recordEvent("shift_started", { seed: game.seed });
     ui.start.classList.add("hidden");
@@ -432,7 +500,9 @@
   }
 
   function update(dt) {
-    if (!game || game.phase === "READY" || game.phase === "RESULT" || game.phase === "PAUSED") return;
+    if (!game) return;
+    updateAudio(dt);
+    if (game.phase === "READY" || game.phase === "RESULT" || game.phase === "PAUSED") return;
     game.time = Math.max(0, game.time - dt);
     game.messageTime = Math.max(0, game.messageTime - dt);
     game.compactorCooldown = Math.max(0, game.compactorCooldown - dt);
@@ -1141,8 +1211,9 @@
   document.querySelector("#pauseButton").addEventListener("click", () => togglePause());
   document.querySelector("#resumeButton").addEventListener("click", () => togglePause());
   document.querySelector("#restartButton").addEventListener("click", () => { resetGame(); startGame(); });
-  function toggleMute() { muted=!muted; ui.mute.textContent=`Sound: ${muted?"off":"on"}`; ui.mute.setAttribute("aria-pressed", String(muted)); }
+  function toggleMute() { muted=!muted;if(!muted)ensureAudio();syncAudioMix();ui.mute.textContent=`Sound: ${muted?"off":"on"}`;ui.mute.setAttribute("aria-pressed", String(muted));if(audio)ui.audioStatus.textContent=muted?"Muted // mix preserved":"Active // 3 buses"; }
   ui.mute.addEventListener("click", toggleMute);
+  for(const slider of [ui.vehicleVolume,ui.streetVolume,ui.effectsVolume])slider.addEventListener("input",()=>{ensureAudio();syncAudioMix();});
 
   resetGame();
   requestAnimationFrame(frame);

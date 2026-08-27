@@ -26,6 +26,7 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | One bag and rupture/cleanup | Hard drops, traffic/truck rupture, debris, re-bag recovery | M | Container physics |
 | Done | Oversized-item proof | Mattress carry offset, stress, brace, slip, vehicle shove | M | Container physics |
 | Done | Scrolling district route | Multi-screen navigation, intersections, route order and access obstacles | XL | Tactile proof |
+| Done | Layered Web Audio mix | Responsive truck, work, traffic, weather and neighborhood buses | L | Scrolling district |
 | P1 | Truck safe-move interlock | Driver/loader coordination | M | Loader greybox |
 | P1 | Two-player browser/network test scene | Validate role interplay and authority | XL | Browser handling proof |
 | P1 | Accessibility settings baseline | Shake, contrast, holds, clock, alarms | M | Input/camera/audio |
@@ -118,6 +119,7 @@ Only after M5 passes: two players, driver/loader handoff, safe-move call, shared
 | Pause/resume | P or button | Freezes route clock and traffic; focus loss pauses automatically |
 | Restart | Enter or button | Results only |
 | Mute | M or button | Any phase; Web Audio remains optional |
+| Audio mix | Footer sliders | Independently adjusts Truck, Street, and Effects buses |
 
 Next input layer should emit named actions independent of devices, support remapping and gamepad, ignore repeats for discrete actions, clear held state on focus loss, and expose hold/toggle policies.
 
@@ -248,6 +250,10 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Let timer expire with unresolved stops; each becomes a complaint in results.
 - [ ] Restart by button and Enter; all state resets.
 - [ ] Mute by button and M; setting and label agree.
+- [ ] Drive, reverse, brake, exit, walk with and without waste, and compact; each expected responsive layer is audible.
+- [ ] Approach and leave moving traffic; proximity cue appears and recedes without masking dispatch cues.
+- [ ] Set Truck, Street, and Effects sliders independently to zero and maximum; only the selected bus changes.
+- [ ] Pause and finish a shift; continuous engine, wind, and hum layers ramp down rather than stopping with a click.
 
 ### Boundary and state cases
 
@@ -270,14 +276,13 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (manual in 0.8.0)
+### Playtest telemetry (manual in 0.9.0)
 
 Record: shift seed, time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, event count, restart choice, and a one-sentence causal account of the worst mistake.
 
 ## Explicit next implementation tasks
 
-1. Add layered engine, idle, reverse alarm, brake, bin, compactor, weather, and neighborhood audio with category controls.
-2. Add versioned local saves for address outcomes, complaints, route familiarity, depot state, and one meaningful upgrade choice.
-3. Tune the forgiving solo loop through observed playtests, then fix clarity and pacing before adding network code.
-4. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
-5. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo and stop-state invariants.
+1. Add versioned local saves for address outcomes, complaints, route familiarity, depot state, and one meaningful upgrade choice.
+2. Tune the forgiving solo loop through observed playtests, then fix clarity, pacing, and audio fatigue before adding network code.
+3. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
+4. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo and stop-state invariants.

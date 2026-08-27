@@ -75,8 +75,16 @@ kbd { font-family: inherit; border: 1px solid currentColor; padding: 1px 5px; }
 .footer-note { align-items: center; margin-top: 12px; padding: 0 4px; color: #717875; font: .68rem/1.2 "Courier New", monospace; letter-spacing: .04em; }
 .footer-note > span:first-child { color: #82735e; }
 .footer-note > span:nth-child(2) { flex: 1; text-align: center; color: #a0a59f; }
-.footer-actions { display: flex; gap: 6px; }
+.footer-actions { position: relative; display: flex; align-items: center; gap: 6px; }
 .text-button { padding: 5px 8px; color: #8c918d; border: 0; background: transparent; box-shadow: none; font-size: .67rem; }
+.audio-mixer { position: relative; }
+.audio-mixer summary { padding: 5px 8px; color: #9b8b72; cursor: pointer; text-transform: uppercase; list-style: none; }
+.audio-mixer summary::-webkit-details-marker { display: none; }
+.audio-mixer summary::before { content: "▥ "; color: var(--amber); }
+.audio-mixer-panel { position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 30; width: 220px; padding: 10px 12px; background: rgba(7,10,13,.97); border: 1px solid #5d513e; box-shadow: 7px 9px 22px rgba(0,0,0,.7); }
+.audio-mixer-panel label { display: grid; grid-template-columns: 58px 1fr; align-items: center; gap: 8px; padding: 4px 0; color: #b2b1a8; text-transform: uppercase; }
+.audio-mixer-panel input { width: 100%; accent-color: var(--amber); }
+.audio-mixer-panel output { display: block; margin-top: 6px; padding-top: 6px; border-top: 1px solid #373a37; color: #7f897e; font-size: .58rem; text-transform: uppercase; }
 .hidden { display: none !important; }
 
 @media (max-width: 780px) {
