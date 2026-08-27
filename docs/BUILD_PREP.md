@@ -292,13 +292,13 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (generated in 0.12.0)
+### Playtest telemetry (generated in 0.13.0)
 
-The results screen generates a copyable report containing the shift seed, active assists, elapsed time, first movement/cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, spills and cleanup, stumbles, damage, score, complaints, credits, trust, and installed upgrades. The observer still records confusion, voluntary retry, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
+The results screen generates a copyable report containing the shift seed, active assists, elapsed time, first movement from either control mode, cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, spills and cleanup, stumbles, damage, score, complaints, credits, trust, installed upgrades, average frame rate, worst frame, slow-frame count, viewport, and display pixel ratio. The observer still records confusion, voluntary retry, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
 
 ## Explicit next implementation tasks
 
-1. Run at least five fresh external solo sessions on build 0.12.0, collecting the generated report plus observer notes for each.
+1. Run at least five fresh external solo sessions on build 0.13.0, collecting the generated report plus observer notes for each.
 2. Tune clarity, pacing, economy, accessibility, and audio fatigue from that evidence, then repeat any failed M5 exit checks.
 3. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
 4. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo, persistence migrations, and stop-state invariants.

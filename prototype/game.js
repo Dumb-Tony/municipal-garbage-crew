@@ -121,7 +121,7 @@
       rngState: shiftSeed,
       persisted: false,
       events: [],
-      metrics: { firstMovement: null, firstResolved: null, blockedActions: 0 },
+      metrics: { firstMovement: null, frameCount: 0, totalFrameMs: 0, worstFrameMs: 0, longFrames: 0 },
       time: duration,
       duration,
       assists,
@@ -269,6 +269,7 @@
   function startGame() {
     if (game.phase !== "READY") return;
     ensureAudio();
+    last = performance.now();
     game.phase = "DRIVE";
     recordEvent("shift_started", { seed: game.seed });
     ui.start.classList.add("hidden");
@@ -573,8 +574,10 @@
     const first=type=>{const event=game.events.find(item=>item.type===type);return event?`${event.at}s`:"—";};
     const resolved=game.events.filter(event=>["stop_collected","stop_tagged"].includes(event.type));
     const order=resolved.map(event=>stopsTemplate.find(stop=>stop.id===event.stopId)?.label||event.stopId).join(" → ")||"none";
+    const averageFrame=game.metrics.frameCount?game.metrics.totalFrameMs/game.metrics.frameCount:0;
+    const averageFps=averageFrame?Math.round(1000/averageFrame):0;
     const lines=[
-      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.12.0",
+      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.13.0",
       `Shift ${campaign.shifts} · seed ${game.seed} · ${timedOut?"clock expired":unresolved()?"ended early":"route complete"}`,
       `Assists: ${activeAssistNames().join(", ")||"none"}`,
       `Elapsed: ${Math.round(game.duration-game.time)}s / ${game.duration}s · score ${game.score} · complaints ${game.complaints}`,
@@ -582,6 +585,7 @@
       `Resolved ${TOTAL_STOPS-unresolved()}/${TOTAL_STOPS} · order: ${order}`,
       `Compactions ${game.events.filter(e=>e.type==="compactor_cycled").length} · collisions ${game.events.filter(e=>e.type==="collision").length} · handling slips ${game.handlingDrops}`,
       `Spills ${game.spills} · cleaned ${game.cleanedSpills} · traffic stumbles ${game.workerStumbles} · truck damage ${game.damage}`,
+      `Performance ${averageFps||"—"} fps avg · worst ${Math.round(game.metrics.worstFrameMs)}ms · slow frames ${game.metrics.longFrames}/${game.metrics.frameCount} · view ${innerWidth}×${innerHeight}@${devicePixelRatio}`,
       `Credits +$${game.earnings} · trust ${campaign.trust} · upgrades ${UPGRADES.filter(u=>campaign.upgrades[u.id]).map(u=>u.name).join(", ")||"none"}`
     ];return lines.join("\n");
   }
@@ -754,6 +758,7 @@
     const braced = keys.has("ShiftLeft") || keys.has("ShiftRight");
     const speed = w.grabbedStop ? 62 : carriedWaste?.type === "bulk" ? (braced ? 34 : 46) : carriedWaste ? 60 : 82;
     if (dx || dy) {
+      if(game.metrics.firstMovement===null){game.metrics.firstMovement=Number((game.duration-game.time).toFixed(2));recordEvent("first_movement",{mode:"foot"});}
       const nextAngle = Math.atan2(dy, dx);
       if (carriedWaste?.type === "bulk") {
         let turn = Math.abs(nextAngle - w.lastMoveAngle);
@@ -1253,7 +1258,11 @@
   }
 
   function frame(now) {
-    const dt = Math.min(.033, (now-last)/1000 || 0); last=now;
+    const rawFrameMs=last?now-last:0;last=now;
+    if(rawFrameMs>0&&game&&!['READY','RESULT','PAUSED'].includes(game.phase)){
+      game.metrics.frameCount+=1;game.metrics.totalFrameMs+=rawFrameMs;game.metrics.worstFrameMs=Math.max(game.metrics.worstFrameMs,rawFrameMs);if(rawFrameMs>34)game.metrics.longFrames+=1;
+    }
+    const dt = Math.min(.033, rawFrameMs/1000 || 0);
     update(dt); draw(); requestAnimationFrame(frame);
   }
 

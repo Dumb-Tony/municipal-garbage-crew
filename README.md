@@ -20,7 +20,7 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.12.0` makes the solo loop safer to tune. End-of-shift scoring, earnings, trust, address outcomes, and legal stop-state transitions now share a pure browser/Node rules module covered by dependency-free automated tests. Persistent assists and copyable playtest reports remain available for external sessions. The game remains browser-first; Unity is not part of the plan.
+Version `0.13.0` strengthens solo-validation evidence. End-of-shift reports now include average frame rate, worst frame, slow-frame count, viewport, pixel ratio, and first movement whether the player starts in the truck or on foot. Scoring, earnings, trust, address outcomes, and legal stop-state transitions share the tested pure rules module introduced in 0.12. Persistent assists remain available for external sessions. The game remains browser-first; Unity is not part of the plan.
 
 Run `npm test` to verify the scoring ceiling, ledger arithmetic, campaign bounds, address history, and stop-state graph. No install or build step is required.
 

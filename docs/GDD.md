@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.12.0
+**Status:** Active preproduction / browser slice 0.13.0
 **Last updated:** 2026-08-27
 **Product direction:** browser-first stylized game; solo now, cooperative expansion evaluated after the core route is proven
 **Current proof:** standalone 2D Canvas prototype, solo, no build step
@@ -216,7 +216,7 @@ Scoring has independent service, safety, cleanliness, compliance, and time dimen
 
 Test whether one route creates meaningful tension between safe handling, contamination judgment, capacity, positioning, and time—and whether mistakes remain legible and funny enough to invite a retry.
 
-### Included through 0.12.0
+### Included through 0.13.0
 
 - Three-screen, camera-tracked Maple District route with ten stops distributed across West Maple, Maple Crossing, and East Maple.
 - Stops may be serviced in any order; the route strip shows district position and every unresolved/resolved stop without forcing a waypoint sequence.
@@ -247,6 +247,7 @@ Test whether one route creates meaningful tension between safe handling, contami
 - Persistent solo setup offers a score-neutral two-minute clock extension, gentler sway/grip handling, half-density traffic, reduced camera shake, and a high-contrast presentation mode. The chosen setup is recorded with the shift rather than hidden from evaluation.
 - Every filed shift generates a copyable plain-text playtest report covering seed, assists, onboarding timings, resolved route order, compaction, collisions, handling errors, spills/recovery, outcome, and progression state.
 - A shared pure rules module now owns final scoring, bounded earnings/trust, address-history updates, and the legal stop-state graph. The browser uses the same functions exercised by native Node tests, and illegal runtime stop transitions are logged and blocked.
+- Playtest reports capture first movement from either control mode plus average frame rate, worst frame, frames over 34 ms, viewport dimensions, and display pixel ratio, providing comparable performance evidence without external analytics or collecting identity data.
 - Deterministic shift seed, deterministic spill checks, and a structured event ledger covering route decisions and consequences.
 - Corrected front-facing truck silhouette with cab, windshield, headlights, and explicit forward marker.
 - Safe road-aligned spawn, road-only movement bounds, and lane-sensitive collision envelopes verified against the initial traffic positions.
@@ -266,7 +267,7 @@ The current implementation is intentionally one script for frictionless delivery
 
 ### Data and state architecture
 
-The authoritative shift state contains phase, control mode, worker and truck state, horizontal camera position, route clock and selected assist profile, score ledger, cargo, stop/bin positions and states, loose-waste position/type/integrity/stress state, traffic axes, static access obstacles, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Stops progress through `waiting → authorized → loading → empty → awaiting-waste → collected`, with `tagged` as the alternate terminal state; loose waste progresses independently through `waiting → ready → carried/dropped → loaded`, with a recoverable `ruptured` branch. Audio reads authoritative state but never mutates simulation: continuous node parameters follow phase, mode, speed and proximity, while event cues use category buses. The 0.12.0 prototype routes final score, campaign consequences, history updates, and stop invariants through a shared tested rules module; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
+The authoritative shift state contains phase, control mode, worker and truck state, horizontal camera position, route clock and selected assist profile, score ledger, cargo, stop/bin positions and states, loose-waste position/type/integrity/stress state, traffic axes, static access obstacles, deterministic seed/RNG state, a structured event ledger, performance counters, transient effects, and outcome counters. Stops progress through `waiting → authorized → loading → empty → awaiting-waste → collected`, with `tagged` as the alternate terminal state; loose waste progresses independently through `waiting → ready → carried/dropped → loaded`, with a recoverable `ruptured` branch. Audio reads authoritative state but never mutates simulation: continuous node parameters follow phase, mode, speed and proximity, while event cues use category buses. The 0.13.0 prototype routes final score, campaign consequences, history updates, and stop invariants through a shared tested rules module and emits comparable runtime-performance evidence; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
 
 Long-term persistence layers:
 
