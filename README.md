@@ -20,7 +20,7 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.9.0` gives the Maple District a responsive night-shift soundscape. Engine idle, load and pitch follow the truck; reversing, compaction, footsteps, carried weight, nearby traffic, winter wind, and electrical street hum create layered feedback. An accessible Audio Mix panel independently controls Truck, Street, and Effects buses, with global mute still available. The three-block route, ten stops, physical waste, contamination, capacity, and recoverable chaos remain integrated. The game remains browser-first; Unity is not part of the plan.
+Version `0.10.0` closes the persistent shift loop. A versioned local crew file records credits, town trust, best score, shift count, audio settings, and history for every address. Filed outcomes, complaints, visits, and clean streaks inform later curb decisions and familiarity bonuses. The depot offers Hydraulic Assist, Hopper Baffles, and Winter Tires, each with a mechanical effect; players can deliberately end a bad shift, accept consequences, return to the depot, purchase upgrades, and begin the next seeded route. The game remains browser-first; Unity is not part of the plan.
 
 ## Repository and publishing policy
 

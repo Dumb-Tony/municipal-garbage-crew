@@ -31,8 +31,8 @@ This document translates the living GDD into an executable plan. Priority means:
 | P1 | Two-player browser/network test scene | Validate role interplay and authority | XL | Browser handling proof |
 | P1 | Accessibility settings baseline | Shake, contrast, holds, clock, alarms | M | Input/camera/audio |
 | P2 | Variable stop definitions and seeds | Replayable authored route envelope | M | Event ledger |
-| P2 | Persistent address history | Complaints and trust affect later shifts | L | Save versioning |
-| P2 | Depot/upgrades slice | Close progression loop | L | Three route outcomes |
+| Done | Persistent address history | Versioned outcomes, complaints, clean streaks and familiarity | L | Save versioning |
+| Done | Depot/upgrades slice | Credits, trust, rank, three upgrades and shift return loop | L | Route outcomes |
 | P2 | 2–5 player session flow | Lobby, join, reconnect, role hints | XL | Network proof |
 
 ## Milestone plan and exit gates
@@ -120,6 +120,7 @@ Only after M5 passes: two players, driver/loader handoff, safe-move call, shared
 | Restart | Enter or button | Results only |
 | Mute | M or button | Any phase; Web Audio remains optional |
 | Audio mix | Footer sliders | Independently adjusts Truck, Street, and Effects buses |
+| End shift | Footer button | Files unresolved stops as missed pickups, persists consequences, and opens results |
 
 Next input layer should emit named actions independent of devices, support remapping and gamepad, ignore repeats for discrete actions, clear held state on focus loss, and expose hold/toggle policies.
 
@@ -254,6 +255,10 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Approach and leave moving traffic; proximity cue appears and recedes without masking dispatch cues.
 - [ ] Set Truck, Street, and Effects sliders independently to zero and maximum; only the selected bus changes.
 - [ ] Pause and finish a shift; continuous engine, wind, and hum layers ramp down rather than stopping with a click.
+- [ ] End a partial shift; verify missed stops, credits, trust, address outcomes, shift number, and result summary agree.
+- [ ] Return to depot and reload; verify the same crew file, last-shift report, audio mix, and address ledger remain.
+- [ ] Accumulate credits and buy each upgrade in separate test saves; verify cost, installed state, rank, reload persistence, and advertised mechanical effect.
+- [ ] Verify Hydraulic Assist changes lift rate, Hopper Baffles changes both limit and HUD, and Winter Tires changes handling and spill probability without removing risk.
 
 ### Boundary and state cases
 
@@ -276,13 +281,12 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (manual in 0.9.0)
+### Playtest telemetry (manual in 0.10.0)
 
 Record: shift seed, time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, event count, restart choice, and a one-sentence causal account of the worst mistake.
 
 ## Explicit next implementation tasks
 
-1. Add versioned local saves for address outcomes, complaints, route familiarity, depot state, and one meaningful upgrade choice.
-2. Tune the forgiving solo loop through observed playtests, then fix clarity, pacing, and audio fatigue before adding network code.
-3. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
-4. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo and stop-state invariants.
+1. Tune the forgiving solo loop through observed playtests, then fix clarity, pacing, economy, accessibility, and audio fatigue before adding network code.
+2. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
+3. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo, persistence migrations, and stop-state invariants.

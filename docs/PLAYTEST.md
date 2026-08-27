@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.9.0
+**Build:** 0.10.0
 **Tester:**  
 **Date / browser:**  
 
@@ -21,6 +21,10 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Could they identify engine load, reversing, compaction, footsteps, and nearby traffic by sound?
 - Audio fatigue or unclear/overpowering layer:
 - Did they discover and understand the Truck / Street / Effects mixer?
+- Did depot credits, trust, and the last-shift report make sense?
+- Could they explain an address-history note on the next shift?
+- Upgrade purchased / expected effect / noticed effect:
+- Did “End shift” feel like a useful recovery choice or an accidental trap?
 - First visible confusion:
 - Compactor attempts / successes:
 - Bin handling slips / most difficult lift:

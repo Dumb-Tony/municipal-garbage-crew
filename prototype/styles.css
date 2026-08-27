@@ -45,6 +45,24 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; outline
 .overlay-card, .decision-card { position: absolute; left: 50%; top: 50%; z-index: 10; width: min(540px, calc(100% - 32px)); padding: clamp(22px, 4vw, 38px); transform: translate(-50%, -50%); background: linear-gradient(135deg, rgba(25,28,30,.98), rgba(8,10,13,.98)); border: 1px solid #5b5b54; border-left: 4px solid var(--amber); box-shadow: 12px 16px 34px rgba(0,0,0,.72), inset 0 0 0 1px rgba(255,255,255,.04); clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
 #startPanel { inset: 0; left: 0; top: 0; width: 100%; height: 100%; padding: clamp(24px, 4vw, 52px); transform: none; display: grid; grid-template-columns: minmax(260px,.92fr) minmax(330px,1.08fr); grid-auto-rows: min-content; align-content: center; column-gap: clamp(24px,5vw,70px); background: linear-gradient(90deg, rgba(2,4,6,.2) 0 44%, rgba(3,5,8,.8) 57%, rgba(3,5,8,.96) 100%), linear-gradient(0deg, rgba(3,5,8,.84), transparent 44%), url("assets/bellwether-noir-title-v2.png") center / cover; border: 0; box-shadow: inset 0 0 110px #000; clip-path: none; }
 #startPanel > * { grid-column: 2; }
+#startPanel .depot-panel { grid-column: 1; grid-row: 1 / span 7; align-self: center; max-height: 480px; overflow: auto; padding: 15px; background: rgba(6,9,11,.92); border: 1px solid #55554d; border-left: 3px solid #748050; box-shadow: 8px 12px 28px rgba(0,0,0,.62); }
+.depot-panel h3 { margin: 12px 0 7px; color: #c8c4b7; font: 900 .72rem/1 "Courier New", monospace; letter-spacing: .1em; text-transform: uppercase; }
+.depot-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; }
+.depot-stats span { padding: 7px; background: #131719; color: #777e78; font: .57rem/1.25 "Courier New",monospace; text-transform: uppercase; }
+.depot-stats b { color: #e0a44d; font-size: 1rem; }
+.depot-note { margin: 8px 0 0; color: #999d97; font: .62rem/1.35 "Courier New",monospace; }
+.upgrade-list { display: grid; gap: 5px; }
+.upgrade-card { display: grid; grid-template-columns: 1fr auto; gap: 5px 8px; align-items: center; padding: 7px 8px; background: #111618; border-left: 2px solid #545e4a; }
+.upgrade-card b { color: #c8c4b7; font: 800 .63rem/1.2 "Courier New",monospace; text-transform: uppercase; }
+.upgrade-card small { color: #777d78; font: .55rem/1.25 "Courier New",monospace; }
+.upgrade-card button { grid-column: 2; grid-row: 1 / span 2; padding: 7px 9px; font-size: .55rem; box-shadow: 2px 3px 0 #030405; }
+.upgrade-card.owned { border-left-color: #84945d; opacity: .82; }
+.upgrade-card.owned button { color: #9ca68b; background: #253027; border-color: #596353; cursor: default; }
+.address-book { margin-top: 9px; border-top: 1px solid #353936; padding-top: 7px; color: #8d938d; font: .6rem/1.35 "Courier New",monospace; }
+.address-book summary { color: #b38a53; cursor: pointer; text-transform: uppercase; }
+#addressHistory { display: grid; gap: 3px; margin-top: 7px; }
+#addressHistory span { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid #262a28; padding-bottom: 2px; }
+.depot-reset { margin-top: 9px; padding: 5px 7px; border-color: #60443d; background: transparent; color: #8b6c64; box-shadow: none; font-size: .5rem; }
 #startPanel .stamp { align-self: end; margin-bottom: 10px; }
 #startPanel h2 { margin-bottom: 14px; color: #ece6d6; font-size: clamp(2.15rem,4.8vw,4.8rem); line-height: .86; letter-spacing: -.045em; text-shadow: 4px 4px 0 #050608; }
 #startPanel .briefing { max-width: 540px; margin-bottom: 14px; color: #b8b9b2; font-family: "Courier New", monospace; font-size: clamp(.74rem,1.25vw,.92rem); line-height: 1.45; }
@@ -93,6 +111,7 @@ kbd { font-family: inherit; border: 1px solid currentColor; padding: 1px 5px; }
   .shift-tag { display: none; }
   #startPanel { grid-template-columns: 1fr; align-content: end; background: linear-gradient(0deg, rgba(3,5,8,.98) 0 43%, rgba(3,5,8,.2) 78%), url("assets/bellwether-noir-title-v2.png") 35% center / cover; }
   #startPanel > * { grid-column: 1; }
+  #startPanel .depot-panel { display: none; }
   #startPanel h2 { font-size: clamp(2rem,8vw,3.5rem); }
   #startPanel .briefing { display: none; }
   .footer-note > span:first-child { display: none; }

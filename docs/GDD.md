@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.9.0
+**Status:** Active preproduction / browser slice 0.10.0
 **Last updated:** 2026-08-27
 **Product direction:** browser-first stylized game; solo now, cooperative expansion evaluated after the core route is proven
 **Current proof:** standalone 2D Canvas prototype, solo, no build step
@@ -216,7 +216,7 @@ Scoring has independent service, safety, cleanliness, compliance, and time dimen
 
 Test whether one route creates meaningful tension between safe handling, contamination judgment, capacity, positioning, and time—and whether mistakes remain legible and funny enough to invite a retry.
 
-### Included through 0.9.0
+### Included through 0.10.0
 
 - Three-screen, camera-tracked Maple District route with ten stops distributed across West Maple, Maple Crossing, and East Maple.
 - Stops may be serviced in any order; the route strip shows district position and every unresolved/resolved stop without forcing a waypoint sequence.
@@ -238,6 +238,12 @@ Test whether one route creates meaningful tension between safe handling, contami
 - 600-second shift tuned for the three-block physical route, mode-aware next-action guidance, scoring, missed-stop/complaint consequences, itemized results, pause, and restart.
 - Dependency-free Web Audio soundscape: speed-responsive engine and filter, persistent idle, reverse alarm, compactor rumble, weight-sensitive footsteps, proximity traffic cues, winter wind, electrical hum, and existing consequence cues.
 - Independent Truck, Street, and Effects gain buses with accessible range controls plus global mute; continuous layers ramp down in ready, result, and pause states.
+- Versioned local campaign save containing shifts, credits, trust, best score, per-address history, installed upgrades, last-shift report, and audio settings; invalid or unavailable storage safely falls back to a fresh in-memory crew file.
+- Depot overlay with current budget/trust/rank, prior shift summary, expandable address ledger, upgrade purchase state, next-shift number, and explicit local reset.
+- Shift filing awards bounded credits, adjusts trust, records every address outcome, changes the deterministic shift seed, and returns results to the depot rather than silently restarting.
+- Familiar clean addresses earn a capped service bonus; repeat complaint history increases the consequence of incorrectly refusing valid service and appears in inspection notes.
+- Three mechanical upgrades: faster hydraulic lifts, two extra hopper-capacity units, and winter tires that improve acceleration/steering while reducing loose-load spill probability.
+- Deliberate early shift closure converts unresolved work into complaints and still advances the persistent loop, allowing a struggling player to cut losses rather than wait for timeout.
 - Deterministic shift seed, deterministic spill checks, and a structured event ledger covering route decisions and consequences.
 - Corrected front-facing truck silhouette with cab, windshield, headlights, and explicit forward marker.
 - Safe road-aligned spawn, road-only movement bounds, and lane-sensitive collision envelopes verified against the initial traffic positions.
@@ -245,7 +251,7 @@ Test whether one route creates meaningful tension between safe handling, contami
 
 ### Explicitly deferred
 
-Multi-object bin contents, multiplayer/networking, procedural layouts, persistence, upgrades, resident actors, and touch/gamepad controls remain deferred. The next implementation milestone adds persistent address history, depot return, and a small upgrade economy.
+Multi-object bin contents, multiplayer/networking, procedural layouts, resident actors, and touch/gamepad controls remain deferred. The next milestone is observed solo validation and tuning: clarity, route duration, chaos recovery, economy pace, accessibility, and voluntary replay.
 
 ## 16. Technical approach
 
@@ -257,7 +263,7 @@ The current implementation is intentionally one script for frictionless delivery
 
 ### Data and state architecture
 
-The authoritative shift state contains phase, control mode, worker and truck state, horizontal camera position, route clock, score ledger, cargo, stop/bin positions and states, loose-waste position/type/integrity/stress state, traffic axes, static access obstacles, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Stops progress through `waiting → authorized → loading → empty → awaiting-waste → collected`, with `tagged` as the alternate terminal state; loose waste progresses independently through `waiting → ready → carried/dropped → loaded`, with a recoverable `ruptured` branch. Audio reads authoritative state but never mutates simulation: continuous node parameters follow phase, mode, speed and proximity, while event cues use category buses. The 0.9.0 prototype records movement handoffs, handling events, waste failures, route decisions, and consequences; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
+The authoritative shift state contains phase, control mode, worker and truck state, horizontal camera position, route clock, score ledger, cargo, stop/bin positions and states, loose-waste position/type/integrity/stress state, traffic axes, static access obstacles, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Stops progress through `waiting → authorized → loading → empty → awaiting-waste → collected`, with `tagged` as the alternate terminal state; loose waste progresses independently through `waiting → ready → carried/dropped → loaded`, with a recoverable `ruptured` branch. Audio reads authoritative state but never mutates simulation: continuous node parameters follow phase, mode, speed and proximity, while event cues use category buses. The 0.10.0 prototype records movement handoffs, handling events, waste failures, route decisions, address outcomes, and consequences; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
 
 Long-term persistence layers:
 
@@ -284,8 +290,8 @@ Save files should be versioned, migrated, and never store scene object reference
 - **M1 — Tactile proof (implemented foundation):** on-foot loader, full bin service, physical bag and mattress, rupture/recovery, grip stress, and traffic/truck interference.
 - **M2 — Browser route expansion (implemented foundation):** three scrolling Bellwether blocks, ten stops, route-order choice, drivable intersections, richer traffic, and access obstacles.
 - **M3 — Atmosphere proof (implemented foundation):** responsive vehicle, footstep, traffic, weather, and neighborhood audio with independent category controls.
-- **M4 — Progression proof (current):** depot, three shifts, persistent addresses, truck/tool upgrade, and complaint recovery.
-- **M5 — Solo validation:** polish, accessibility baseline, performance validation, and observed evidence that the forgiving solo route is understandable and worth replaying.
+- **M4 — Progression proof (implemented foundation):** depot, versioned crew file, persistent address outcomes, trust/credits, three mechanical upgrades, and early-shift recovery.
+- **M5 — Solo validation (current):** polish, accessibility baseline, performance validation, and observed evidence that the forgiving solo route is understandable and worth replaying.
 - **M6 — Multiplayer gate:** only after M5 passes, build a narrow driver/loader authority test and record a multiplayer go/no-go decision.
 
 Exit criteria and task ordering are in `BUILD_PREP.md`.
@@ -332,8 +338,7 @@ Exit criteria and task ordering are in `BUILD_PREP.md`.
 
 The active sequence is intentionally solo-first and will be completed in this order:
 
-1. Add versioned local persistence for address history, complaints, depot return, and a small truck/tool upgrade choice.
-2. Run and tune repeated solo playtests for interaction clarity, forgiving chaos, route duration, audio fatigue, and voluntary retry.
-3. Only after the solo loop passes, build a minimal two-player authority/role test and make an evidence-based multiplayer go/no-go decision.
+1. Run and tune repeated solo playtests for interaction clarity, forgiving chaos, route duration, economy pace, audio fatigue, accessibility, and voluntary retry.
+2. Only after the solo loop passes, build a minimal two-player authority/role test and make an evidence-based multiplayer go/no-go decision.
 
 Cross-cutting work: move score mutations into event reducers, add named input actions/remapping, split simulation/render/audio/persistence modules when route expansion begins, and schedule sanitation-worker interviews before locking handling or consequence tone.

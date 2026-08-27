@@ -15,6 +15,12 @@
     resultSummary: document.querySelector("#resultSummary"),
     resultStats: document.querySelector("#resultStats"),
     resultLedger: document.querySelector("#resultLedger"),
+    depotStats: document.querySelector("#depotStats"),
+    lastShiftNote: document.querySelector("#lastShiftNote"),
+    upgradeList: document.querySelector("#upgradeList"),
+    addressHistory: document.querySelector("#addressHistory"),
+    resetCareer: document.querySelector("#resetCareerButton"),
+    endShift: document.querySelector("#endShiftButton"),
     status: document.querySelector("#statusText"),
     mute: document.querySelector("#muteButton"),
     audioStatus: document.querySelector("#audioStatus"),
@@ -69,11 +75,38 @@
     { id: "mattress-24", stopId: 3, x: 602, y: 184, type: "bulk", label: "SOAKED MATTRESS", weight: 1.5, fragile: false }
   ];
 
+  const SAVE_KEY="municipal-garbage-crew.campaign";
+  const SAVE_VERSION=1;
+  const UPGRADES=[
+    {id:"hydraulicAssist",name:"Hydraulic Assist",cost:450,description:"Bin lifts fill 28% faster."},
+    {id:"hopperBaffles",name:"Hopper Baffles",cost:650,description:"Capacity increases from 8.0 to 10.0."},
+    {id:"winterTires",name:"Winter Tires",cost:500,description:"Sharper control and fewer collision spills."}
+  ];
+
+  function defaultCampaign(){return{version:SAVE_VERSION,shifts:0,credits:0,trust:50,bestScore:0,addressHistory:{},upgrades:{},lastShift:null,settings:{vehicle:72,street:55,effects:78}};}
+  function loadCampaign(){try{const parsed=JSON.parse(localStorage.getItem(SAVE_KEY));if(!parsed||parsed.version!==SAVE_VERSION)return defaultCampaign();const base=defaultCampaign();return{...base,...parsed,addressHistory:{...base.addressHistory,...parsed.addressHistory},upgrades:{...base.upgrades,...parsed.upgrades},settings:{...base.settings,...parsed.settings}};}catch(_){return defaultCampaign();}}
+  let campaign=loadCampaign();
+  function saveCampaign(){try{campaign.settings={vehicle:Number(ui.vehicleVolume.value),street:Number(ui.streetVolume.value),effects:Number(ui.effectsVolume.value)};localStorage.setItem(SAVE_KEY,JSON.stringify(campaign));}catch(_){/* Persistence is optional on restricted origins. */}}
+  function capacityLimit(){return campaign.upgrades.hopperBaffles?10:8;}
+  function renderDepot(){
+    const owned=UPGRADES.filter(u=>campaign.upgrades[u.id]).length;const rank=1+Math.floor(campaign.shifts/3)+owned;
+    ui.depotStats.innerHTML=`<span>Credits<br><b>$${campaign.credits}</b></span><span>Town trust<br><b>${campaign.trust}</b></span><span>Crew rank<br><b>${rank}</b></span>`;
+    ui.lastShiftNote.textContent=campaign.lastShift?`Last shift: ${campaign.lastShift.score} points · $${campaign.lastShift.earned} earned · ${campaign.lastShift.complaints} complaint${campaign.lastShift.complaints===1?"":"s"}. Best: ${campaign.bestScore}.`:`No completed shifts on file. First route earns the garage budget.`;
+    ui.upgradeList.innerHTML=UPGRADES.map(upgrade=>{const owned=campaign.upgrades[upgrade.id];const disabled=owned||campaign.credits<upgrade.cost;return`<div class="upgrade-card ${owned?"owned":""}"><b>${upgrade.name}</b><small>${upgrade.description}</small><button type="button" data-upgrade="${upgrade.id}" ${disabled?"disabled":""}>${owned?"Installed":`$${upgrade.cost}`}</button></div>`;}).join("");
+    const history=stopsTemplate.map(stop=>({stop,entry:campaign.addressHistory[stop.id]})).filter(item=>item.entry).sort((a,b)=>b.entry.visits-a.entry.visits);
+    ui.addressHistory.innerHTML=history.length?history.map(({stop,entry})=>`<span><b>${stop.label}</b><i>${entry.lastOutcome.replaceAll("-"," ")} · ${entry.visits}×</i></span>`).join(""):`<span>No address notes yet.</span>`;
+    document.querySelector("#startButton").innerHTML=`Begin shift ${campaign.shifts+1} <span>›</span>`;
+  }
+
+  function buyUpgrade(id){const upgrade=UPGRADES.find(item=>item.id===id);if(!upgrade||campaign.upgrades[id]||campaign.credits<upgrade.cost)return;campaign.credits-=upgrade.cost;campaign.upgrades[id]=true;saveCampaign();renderDepot();showMessage(`${upgrade.name} installed for the next shift.`);beep(530,.16,"triangle",.05);}
+
   function resetGame() {
+    const shiftSeed=SHIFT_SEED+campaign.shifts*7919;
     game = {
       phase: "READY",
-      seed: SHIFT_SEED,
-      rngState: SHIFT_SEED,
+      seed: shiftSeed,
+      rngState: shiftSeed,
+      persisted: false,
       events: [],
       time: SHIFT_DURATION,
       score: 0,
@@ -101,7 +134,7 @@
       shake: 0,
       truck: { x: 112, y: 305, angle: 0, speed: 0, stun: 0, collisionCooldown: 0 },
       worker: { x: 64, y: 305, angle: 0, grabbedStop: null, grabbedWaste: null, carryStress: 0, lastMoveAngle: 0, stumble: 0, collisionCooldown: 0 },
-      stops: stopsTemplate.map(s => ({ ...s, binX: s.x, binY: s.y, binReturned: false, state: "waiting", authorized: false, revealed: false, wobble: randomSeeded(s.id) * 6 })),
+      stops: stopsTemplate.map(s => ({ ...s, history: campaign.addressHistory[s.id]||null, binX: s.x, binY: s.y, binReturned: false, state: "waiting", authorized: false, revealed: false, wobble: randomSeeded(s.id+campaign.shifts*13) * 6 })),
       waste: wasteTemplate.map(w => ({ ...w, state: "waiting", integrity: 1, angle: w.type === "bulk" ? -.08 : 0 })),
       traffic: trafficTemplate.map(t => ({ ...t })),
       obstacles: obstacleTemplate.map(o => ({ ...o }))
@@ -110,6 +143,7 @@
     ui.decision.classList.add("hidden");
     ui.result.classList.add("hidden");
     ui.pause.classList.add("hidden");
+    renderDepot();
     setStatus("Click “Clock in” to begin.");
   }
 
@@ -270,11 +304,13 @@
   function renderDecision(stop) {
     ui.decisionTitle.textContent = `${stop.label} · ${stop.kind}`;
     const uncertain = stop.ambiguous && !stop.revealed;
-    ui.decisionText.textContent = uncertain
+    const contents = uncertain
       ? "The bags are sealed and unusually rigid. You can make the call now, or spend five seconds checking beneath the top bag."
       : stop.contaminated
         ? "Prohibited material is visible. Collecting saves the stop but causes a contamination violation."
         : "Contents look acceptable. Load it, or leave it behind and take a missed-pickup complaint.";
+    const history=stop.history;const note=history?(history.lastOutcome.includes("complaint")||history.lastOutcome==="missed"?` Depot note: this address has ${history.complaints} prior complaint${history.complaints===1?"":"s"}; document the outcome.`:` Crew memory: ${history.visits} prior visit${history.visits===1?"":"s"}, last outcome ${history.lastOutcome.replaceAll("-"," ")}.`):" First recorded visit for this crew.";
+    ui.decisionText.textContent=contents+note;
     ui.inspect.classList.toggle("hidden", !uncertain);
   }
 
@@ -305,7 +341,7 @@
   }
 
   function beginBinLoad(stop) {
-    if (usedCapacity() + stop.weight > 8) {
+    if (usedCapacity() + stop.weight > capacityLimit()) {
       showMessage("Hopper is full. Drop the bin and compact before loading.");
       beep(110, .18, "sawtooth");
       return;
@@ -362,9 +398,9 @@
     }
     stop.state = "collected";
     game.collected += 1;
-    game.score += 120;
+    const familiarityBonus=Math.min(30,(stop.history?.cleanStreak||0)*5);game.score += 120+familiarityBonus;
     recordEvent("stop_collected", { stopId: stop.id });
-    showMessage(`${stop.label} fully serviced. +120`);
+    showMessage(`${stop.label} fully serviced. +${120+familiarityBonus}${familiarityBonus?" familiarity":""}`);
     beep(420, .1, "sine");
     checkRouteEnd();
   }
@@ -382,7 +418,7 @@
       beep(520, .09, "sine");
     } else {
       game.complaints += 1;
-      game.score -= 60;
+      const repeatPenalty=Math.min(30,(stop.history?.complaints||0)*10);game.score -= 60+repeatPenalty;
       showMessage("Valid pickup skipped. Resident complaint filed.");
       beep(120, .15, "sawtooth");
     }
@@ -464,15 +500,17 @@
     const dirtyStreet = uncleanedSpills();
     game.complaints += missed + dirtyStreet;
     const correctTags = game.stops.filter(s => s.state === "tagged" && s.contaminated).length;
-    const wrongTags = game.stops.filter(s => s.state === "tagged" && !s.contaminated).length;
     const compactions = game.events.filter(e => e.type === "compactor_cycled").length;
     const loadedBags = game.waste.filter(w => w.state === "loaded" && w.type === "bag").length;
     const loadedBulk = game.waste.filter(w => w.state === "loaded" && w.type === "bulk").length;
+    const familiarityBonus=game.stops.filter(s=>s.state==="collected").reduce((sum,s)=>sum+Math.min(30,(s.history?.cleanStreak||0)*5),0);
+    const wrongTagPenalty=game.stops.filter(s=>s.state==="tagged"&&!s.contaminated).reduce((sum,s)=>sum+60+Math.min(30,(s.history?.complaints||0)*10),0);
     const scoreLines = [
       ["Collected service", game.collected * 120], ["Correct contamination tags", correctTags * 70],
+      ["Route familiarity", familiarityBonus],
       ["Compactor operation", compactions * 25], ["Spill recovery", game.cleanedSpills * 40],
       ["Loose bags loaded", loadedBags * 35], ["Oversized items loaded", loadedBulk * 55],
-      ["Time remaining", Math.floor(game.time) * 2], ["Incorrect tags", wrongTags * -60],
+      ["Time remaining", Math.floor(game.time) * 2], ["Incorrect tags", -wrongTagPenalty],
       ["Contaminated loads", game.badLoads * -90], ["Missed stops", missed * -80],
       ["Handling slips", game.handlingDrops * -20], ["Spills created", game.spills * -70],
       ["Truck damage", game.damage * -45], ["Traffic stumbles", game.workerStumbles * -25]
@@ -480,23 +518,39 @@
     game.score = Math.max(0, scoreLines.reduce((sum, line) => sum + line[1], 0));
     game.phase = "RESULT";
     recordEvent("shift_finished", { timedOut, score: game.score, complaints: game.complaints });
+    persistShift();
     ui.decision.classList.add("hidden");
     ui.resultTitle.textContent = timedOut ? "Shift clock expired" : (game.complaints === 0 ? "Clean route" : "Route closed");
     ui.resultSummary.textContent = game.complaints === 0
       ? "Maple Street is clear, the hopper is under control, and dispatch has nothing to complain about."
       : `The route is closed with ${game.complaints} complaint${game.complaints === 1 ? "" : "s"}. The town will remember what happened here.`;
+    ui.resultSummary.textContent+=` Depot credited $${game.earnings} to the crew budget.`;
     ui.resultStats.innerHTML = [
       ["Score", game.score], ["Collected", `${game.collected}/${TOTAL_STOPS}`],
       ["Correct tags", game.stops.filter(s => s.state === "tagged" && s.contaminated).length],
       ["Handling slips", game.handlingDrops], ["Waste loaded", `${loadedBags+loadedBulk}/2`], ["Traffic stumbles", game.workerStumbles], ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
-      ["Shift seed", game.seed], ["Events logged", game.events.length]
+      ["Credits earned", `$${game.earnings}`], ["Town trust", campaign.trust], ["Shift seed", game.seed], ["Events logged", game.events.length]
     ].map(([a, b]) => `<span><b>${a}</b><br>${b}</span>`).join("");
     ui.resultLedger.innerHTML = scoreLines.filter(line => line[1] !== 0).map(([label, value]) =>
       `<div class="${value < 0 ? "negative" : "positive"}"><span>${label}</span><b>${value > 0 ? "+" : ""}${value}</b></div>`
     ).join("");
     ui.result.classList.remove("hidden");
-    setStatus("Shift complete. Press Enter to run it again.");
+    setStatus("Shift filed. Press Enter or Return to depot.");
     beep(game.complaints ? 170 : 560, .35, "triangle", .06);
+  }
+
+  function endShiftEarly(){if(!game||["READY","RESULT"].includes(game.phase))return;keys.clear();ui.pause.classList.add("hidden");finishGame(false);}
+
+  function persistShift(){
+    if(game.persisted)return;game.persisted=true;
+    for(const stop of game.stops){
+      const previous=campaign.addressHistory[stop.id]||{scheduled:0,visits:0,complaints:0,cleanStreak:0,lastOutcome:"new"};
+      let outcome="missed",complaint=true,clean=false;
+      if(stop.state==="collected"){outcome=stop.contaminated?"contaminated-load":"collected-clean";complaint=stop.contaminated;clean=!stop.contaminated;}
+      else if(stop.state==="tagged"){outcome=stop.contaminated?"tagged-correct":"tagged-complaint";complaint=!stop.contaminated;clean=stop.contaminated;}
+      campaign.addressHistory[stop.id]={scheduled:(previous.scheduled||0)+1,visits:previous.visits+(stop.state!=="waiting"?1:0),complaints:previous.complaints+(complaint?1:0),cleanStreak:clean?previous.cleanStreak+1:0,lastOutcome:outcome};
+    }
+    const earned=Math.max(75,Math.min(900,Math.floor(game.score*.28)));game.earnings=earned;campaign.credits+=earned;campaign.shifts+=1;campaign.bestScore=Math.max(campaign.bestScore,game.score);campaign.trust=Math.max(0,Math.min(100,campaign.trust+(game.complaints===0?3:-Math.min(12,game.complaints*2))));campaign.lastShift={score:game.score,earned,complaints:game.complaints,at:new Date().toISOString()};saveCampaign();renderDepot();
   }
 
   function update(dt) {
@@ -628,7 +682,7 @@
   }
 
   function loadWaste(waste) {
-    if (usedCapacity() + waste.weight > 8) { showMessage("Hopper is full. Set this down and compact first."); beep(110,.18,"sawtooth"); return; }
+    if (usedCapacity() + waste.weight > capacityLimit()) { showMessage("Hopper is full. Set this down and compact first."); beep(110,.18,"sawtooth"); return; }
     waste.state = "loaded";
     game.worker.grabbedWaste = null;
     game.worker.carryStress = 0;
@@ -784,7 +838,7 @@
     load.balance *= Math.pow(.985, dt * 60);
     if (keys.has("Space")) {
       const stability = Math.max(.18, 1 - Math.abs(load.balance) * .72);
-      load.progress = Math.min(1, load.progress + dt * .48 * stability);
+      load.progress = Math.min(1, load.progress + dt * .48 * (campaign.upgrades.hydraulicAssist?1.28:1) * stability);
     }
     if (Math.abs(load.balance) > 1.05) {
       load.drops += 1;
@@ -810,12 +864,12 @@
     const reverse = keys.has("ArrowDown") || keys.has("KeyS");
     const left = keys.has("ArrowLeft") || keys.has("KeyA");
     const right = keys.has("ArrowRight") || keys.has("KeyD");
-    if (forward) t.speed += 115 * dt;
+    if (forward) t.speed += 115 * (campaign.upgrades.winterTires?1.1:1) * dt;
     if (reverse) t.speed -= 92 * dt;
     if (!forward && !reverse) t.speed *= Math.pow(.16, dt);
     t.speed = Math.max(-58, Math.min(112, t.speed));
     const steer = (right ? 1 : 0) - (left ? 1 : 0);
-    if (Math.abs(t.speed) > 3) t.angle += steer * 1.85 * dt * Math.sign(t.speed) * Math.min(1, Math.abs(t.speed) / 40);
+    if (Math.abs(t.speed) > 3) t.angle += steer * 1.85 * (campaign.upgrades.winterTires?1.12:1) * dt * Math.sign(t.speed) * Math.min(1, Math.abs(t.speed) / 40);
     const nx = t.x + Math.cos(t.angle) * t.speed * dt;
     const ny = t.y + Math.sin(t.angle) * t.speed * dt;
     if (isTruckRoad(nx,ny)) { t.x = nx; t.y = ny; }
@@ -858,7 +912,7 @@
         game.shake = .45;
         showMessage(o.moving ? "Traffic collision! Truck damage recorded." : o.type==="barrier" ? "Roadwork barrier clipped. Change lanes through the chicane." : "Blocked curb clipped. Back out carefully.");
         beep(72, .3, "sawtooth", .07);
-        if (game.loose > 1 && random() < .48) createSpill();
+        if (game.loose > 1 && random() < (campaign.upgrades.winterTires?.28:.48)) createSpill();
         break;
       }
     }
@@ -1125,9 +1179,9 @@
     ctx.fillStyle="#6d726e";ctx.font="bold 9px Courier New";ctx.fillText("BSA // ROUTE 04",32,33);ctx.fillText("STOPS",179,33);ctx.fillText("HOPPER PRESSURE",300,33);ctx.fillText("SERVICE SCORE",716,33);ctx.fillText("CALLS",858,33);
     ctx.font="bold 26px Arial Narrow, Arial";ctx.fillStyle=game.time<30?"#c5523d":"#e9a040";ctx.fillText(`${Math.ceil(game.time)}`,32,66);ctx.font="bold 9px Courier New";ctx.fillStyle="#777b77";ctx.fillText("SECONDS",82,66);
     ctx.font="bold 23px Arial Narrow, Arial";ctx.fillStyle="#ddd8ca";ctx.fillText(`${TOTAL_STOPS-unresolved()}/${TOTAL_STOPS}`,179,66);ctx.fillText(`${game.score}`,716,66);ctx.fillText(`${game.complaints}`,858,66);
-    ctx.fillStyle="#24292b";ctx.fillRect(300,49,360,20);ctx.strokeStyle="#535751";ctx.strokeRect(300,49,360,20);ctx.fillStyle=usedCapacity()>6.8?"#a54131":"#7d8b4d";ctx.fillRect(303,52,354*Math.min(1,usedCapacity()/8),14);
+    const capacity=capacityLimit();ctx.fillStyle="#24292b";ctx.fillRect(300,49,360,20);ctx.strokeStyle="#535751";ctx.strokeRect(300,49,360,20);ctx.fillStyle=usedCapacity()>capacity*.85?"#a54131":"#7d8b4d";ctx.fillRect(303,52,354*Math.min(1,usedCapacity()/capacity),14);
     for(let x=306;x<654;x+=22){ctx.fillStyle="rgba(8,10,12,.22)";ctx.fillRect(x,52,2,14);}
-    ctx.fillStyle="#d8d3c5";ctx.font="bold 9px Courier New";ctx.fillText(`${usedCapacity().toFixed(1)} / 8.0 CU  //  LOOSE ${game.loose.toFixed(1)}`,312,64);
+    ctx.fillStyle="#d8d3c5";ctx.font="bold 9px Courier New";ctx.fillText(`${usedCapacity().toFixed(1)} / ${capacity.toFixed(1)} CU  //  LOOSE ${game.loose.toFixed(1)}`,312,64);
     if(game.compactorCooldown>0){ctx.fillStyle="#e99b32";ctx.fillText(`CYCLE ${game.compactorCooldown.toFixed(1)}S`,555,82);}
     const prompt = contextualPrompt();
     if(prompt){ctx.fillStyle="rgba(7,10,13,.9)";ctx.fillRect(310,100,340,28);ctx.strokeStyle="#5d4a32";ctx.strokeRect(310,100,340,28);ctx.fillStyle="#e2a34c";ctx.font="bold 10px Courier New";ctx.textAlign="center";ctx.fillText(prompt,480,118);ctx.textAlign="left";}
@@ -1198,7 +1252,7 @@
     if (event.code === "KeyC") compact();
     if (event.code === "KeyX") cleanSpill();
     if (event.code === "KeyP") togglePause();
-    if (event.code === "Enter" && game.phase === "RESULT") { resetGame(); startGame(); }
+    if (event.code === "Enter" && game.phase === "RESULT") resetGame();
     if (event.code === "KeyM") toggleMute();
   });
   addEventListener("keyup", event => keys.delete(event.code));
@@ -1209,12 +1263,16 @@
   document.querySelector("#tagButton").addEventListener("click", tagActive);
   document.querySelector("#inspectButton").addEventListener("click", inspectCloser);
   document.querySelector("#pauseButton").addEventListener("click", () => togglePause());
+  ui.endShift.addEventListener("click",endShiftEarly);
   document.querySelector("#resumeButton").addEventListener("click", () => togglePause());
-  document.querySelector("#restartButton").addEventListener("click", () => { resetGame(); startGame(); });
+  document.querySelector("#restartButton").addEventListener("click", resetGame);
+  ui.upgradeList.addEventListener("click",event=>{const button=event.target.closest("[data-upgrade]");if(button)buyUpgrade(button.dataset.upgrade);});
+  ui.resetCareer.addEventListener("click",()=>{if(!confirm("Reset all local crew history, credits, trust, and upgrades?"))return;campaign=defaultCampaign();try{localStorage.removeItem(SAVE_KEY);}catch(_){}ui.vehicleVolume.value=campaign.settings.vehicle;ui.streetVolume.value=campaign.settings.street;ui.effectsVolume.value=campaign.settings.effects;resetGame();syncAudioMix();});
   function toggleMute() { muted=!muted;if(!muted)ensureAudio();syncAudioMix();ui.mute.textContent=`Sound: ${muted?"off":"on"}`;ui.mute.setAttribute("aria-pressed", String(muted));if(audio)ui.audioStatus.textContent=muted?"Muted // mix preserved":"Active // 3 buses"; }
   ui.mute.addEventListener("click", toggleMute);
-  for(const slider of [ui.vehicleVolume,ui.streetVolume,ui.effectsVolume])slider.addEventListener("input",()=>{ensureAudio();syncAudioMix();});
+  for(const slider of [ui.vehicleVolume,ui.streetVolume,ui.effectsVolume])slider.addEventListener("input",()=>{ensureAudio();syncAudioMix();saveCampaign();});
 
+  ui.vehicleVolume.value=campaign.settings.vehicle;ui.streetVolume.value=campaign.settings.street;ui.effectsVolume.value=campaign.settings.effects;
   resetGame();
   requestAnimationFrame(frame);
 })();

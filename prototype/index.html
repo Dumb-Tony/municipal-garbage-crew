@@ -10,7 +10,7 @@
   <meta property="og:image" content="https://dumb-tony.github.io/municipal-garbage-crew/prototype/assets/bellwether-noir-title-v2.png">
   <meta name="twitter:card" content="summary_large_image">
   <title>Municipal Garbage Crew — First Route</title>
-  <link rel="stylesheet" href="styles.css?v=0.9.0">
+  <link rel="stylesheet" href="styles.css?v=0.10.0">
 </head>
 <body>
   <main class="shell">
@@ -25,6 +25,18 @@
     <section class="game-frame" aria-label="Playable garbage collection route">
       <canvas id="game" width="960" height="600" tabindex="0" aria-label="Top-down sanitation game. Use WASD or arrow keys to drive and walk, F to enter or exit the truck, Space for contextual work, E to grab or release bins and loose waste, Shift to brace oversized items, R to tag contamination, Q to inspect uncertain waste, X to clean spills, and C to compact."></canvas>
       <div id="startPanel" class="overlay-card">
+        <aside id="depotPanel" class="depot-panel" aria-label="Persistent depot and upgrades">
+          <p class="eyebrow">BSA DEPOT // CREW FILE</p>
+          <div id="depotStats" class="depot-stats"></div>
+          <p id="lastShiftNote" class="depot-note">No completed shifts on file.</p>
+          <h3>Garage upgrades</h3>
+          <div id="upgradeList" class="upgrade-list"></div>
+          <details class="address-book">
+            <summary>Address history</summary>
+            <div id="addressHistory"></div>
+          </details>
+          <button id="resetCareerButton" class="depot-reset" type="button">Reset crew file</button>
+        </aside>
         <p class="stamp">ROUTE 04 · MAPLE DISTRICT</p>
         <h2>Three blocks.<br>Ten stops.<br>One working compactor.</h2>
         <p class="briefing">The complaints started before dawn. Work Maple in any order, watch cross traffic and blocked curbs, manage the hopper, and do not give the mayor another reason to call.</p>
@@ -61,12 +73,12 @@
         <p id="resultSummary"></p>
         <div id="resultStats" class="result-stats"></div>
         <div id="resultLedger" class="result-ledger"></div>
-        <button id="restartButton" type="button">Run route again</button>
+        <button id="restartButton" type="button">Return to depot</button>
       </div>
     </section>
 
     <footer class="footer-note">
-      <span>BUILD 0.9.0 // NIGHT-SHIFT MIX</span>
+      <span>BUILD 0.10.0 // DEPOT LEDGER</span>
       <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
       <div class="footer-actions">
         <details class="audio-mixer">
@@ -78,11 +90,12 @@
             <output id="audioStatus" aria-live="polite">Starts when route begins</output>
           </div>
         </details>
+        <button id="endShiftButton" class="text-button" type="button">End shift</button>
         <button id="pauseButton" class="text-button" type="button">Pause</button>
         <button id="muteButton" class="text-button" type="button" aria-pressed="false">Sound: on</button>
       </div>
     </footer>
   </main>
-  <script src="game.js?v=0.9.0" defer></script>
+  <script src="game.js?v=0.10.0" defer></script>
 </body>
 </html>
