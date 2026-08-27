@@ -1,10 +1,11 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.10.0
+**Build:** 0.11.0
 **Tester:**  
 **Date / browser:**  
+**Shift setup / assists:**
 
-Do not explain the controls beyond what the game shows. Ask the player to run the route once, then retry only if they choose to.
+Do not explain the controls beyond what the game shows. Ask the player to run the route once, then retry only if they choose to. At results, use **Playtest report → Copy report** and paste it below. Do not turn assists off merely to make the test “count”; record the setup and compare like with like.
 
 ## Observer notes
 
@@ -52,3 +53,7 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Strongest evidence for the concept:
 - Strongest evidence against the concept:
 - Required change before next test:
+
+## Copied in-game report
+
+Paste the generated report here:

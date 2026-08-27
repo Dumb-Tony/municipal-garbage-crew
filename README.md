@@ -20,7 +20,7 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.10.0` closes the persistent shift loop. A versioned local crew file records credits, town trust, best score, shift count, audio settings, and history for every address. Filed outcomes, complaints, visits, and clean streaks inform later curb decisions and familiarity bonuses. The depot offers Hydraulic Assist, Hopper Baffles, and Winter Tires, each with a mechanical effect; players can deliberately end a bad shift, accept consequences, return to the depot, purchase upgrades, and begin the next seeded route. The game remains browser-first; Unity is not part of the plan.
+Version `0.11.0` adds the solo-validation kit. Persistent shift setup now includes a score-neutral relaxed clock, forgiving handling, light traffic, reduced camera shake, and high contrast. Each completed or abandoned shift produces a copyable report with the seed, assists, onboarding times, route order, mistakes, recovery, outcome, and progression state so playtests can be compared instead of judged from memory. The persistent depot, address history, upgrades, and consequences remain intact. The game remains browser-first; Unity is not part of the plan.
 
 ## Repository and publishing policy
 

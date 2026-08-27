@@ -21,6 +21,13 @@
     addressHistory: document.querySelector("#addressHistory"),
     resetCareer: document.querySelector("#resetCareerButton"),
     endShift: document.querySelector("#endShiftButton"),
+    relaxedClock: document.querySelector("#relaxedClock"),
+    handlingAssist: document.querySelector("#handlingAssist"),
+    lightTraffic: document.querySelector("#lightTraffic"),
+    reducedShake: document.querySelector("#reducedShake"),
+    highContrast: document.querySelector("#highContrast"),
+    playtestReport: document.querySelector("#playtestReport"),
+    copyReport: document.querySelector("#copyReportButton"),
     status: document.querySelector("#statusText"),
     mute: document.querySelector("#muteButton"),
     audioStatus: document.querySelector("#audioStatus"),
@@ -83,10 +90,12 @@
     {id:"winterTires",name:"Winter Tires",cost:500,description:"Sharper control and fewer collision spills."}
   ];
 
-  function defaultCampaign(){return{version:SAVE_VERSION,shifts:0,credits:0,trust:50,bestScore:0,addressHistory:{},upgrades:{},lastShift:null,settings:{vehicle:72,street:55,effects:78}};}
+  function defaultCampaign(){return{version:SAVE_VERSION,shifts:0,credits:0,trust:50,bestScore:0,addressHistory:{},upgrades:{},lastShift:null,settings:{vehicle:72,street:55,effects:78,relaxedClock:true,handlingAssist:true,lightTraffic:false,reducedShake:false,highContrast:false}};}
   function loadCampaign(){try{const parsed=JSON.parse(localStorage.getItem(SAVE_KEY));if(!parsed||parsed.version!==SAVE_VERSION)return defaultCampaign();const base=defaultCampaign();return{...base,...parsed,addressHistory:{...base.addressHistory,...parsed.addressHistory},upgrades:{...base.upgrades,...parsed.upgrades},settings:{...base.settings,...parsed.settings}};}catch(_){return defaultCampaign();}}
   let campaign=loadCampaign();
-  function saveCampaign(){try{campaign.settings={vehicle:Number(ui.vehicleVolume.value),street:Number(ui.streetVolume.value),effects:Number(ui.effectsVolume.value)};localStorage.setItem(SAVE_KEY,JSON.stringify(campaign));}catch(_){/* Persistence is optional on restricted origins. */}}
+  function saveCampaign(){try{campaign.settings={vehicle:Number(ui.vehicleVolume.value),street:Number(ui.streetVolume.value),effects:Number(ui.effectsVolume.value),relaxedClock:ui.relaxedClock.checked,handlingAssist:ui.handlingAssist.checked,lightTraffic:ui.lightTraffic.checked,reducedShake:ui.reducedShake.checked,highContrast:ui.highContrast.checked};localStorage.setItem(SAVE_KEY,JSON.stringify(campaign));}catch(_){/* Persistence is optional on restricted origins. */}}
+  function applyCampaignSettings(){ui.vehicleVolume.value=campaign.settings.vehicle;ui.streetVolume.value=campaign.settings.street;ui.effectsVolume.value=campaign.settings.effects;ui.relaxedClock.checked=campaign.settings.relaxedClock;ui.handlingAssist.checked=campaign.settings.handlingAssist;ui.lightTraffic.checked=campaign.settings.lightTraffic;ui.reducedShake.checked=campaign.settings.reducedShake;ui.highContrast.checked=campaign.settings.highContrast;document.body.classList.toggle("high-contrast",ui.highContrast.checked);}
+  function activeAssistNames(){return Object.entries({"Relaxed clock":game.assists.relaxedClock,"Handling assist":game.assists.handlingAssist,"Light traffic":game.assists.lightTraffic,"Reduced shake":game.assists.reducedShake,"High contrast":game.assists.highContrast}).filter(([,on])=>on).map(([name])=>name);}
   function capacityLimit(){return campaign.upgrades.hopperBaffles?10:8;}
   function renderDepot(){
     const owned=UPGRADES.filter(u=>campaign.upgrades[u.id]).length;const rank=1+Math.floor(campaign.shifts/3)+owned;
@@ -102,13 +111,18 @@
 
   function resetGame() {
     const shiftSeed=SHIFT_SEED+campaign.shifts*7919;
+    const assists={relaxedClock:campaign.settings.relaxedClock,handlingAssist:campaign.settings.handlingAssist,lightTraffic:campaign.settings.lightTraffic,reducedShake:campaign.settings.reducedShake,highContrast:campaign.settings.highContrast};
+    const duration=assists.relaxedClock?SHIFT_DURATION+120:SHIFT_DURATION;
     game = {
       phase: "READY",
       seed: shiftSeed,
       rngState: shiftSeed,
       persisted: false,
       events: [],
-      time: SHIFT_DURATION,
+      metrics: { firstMovement: null, firstResolved: null, blockedActions: 0 },
+      time: duration,
+      duration,
+      assists,
       score: 0,
       complaints: 0,
       spills: 0,
@@ -136,7 +150,7 @@
       worker: { x: 64, y: 305, angle: 0, grabbedStop: null, grabbedWaste: null, carryStress: 0, lastMoveAngle: 0, stumble: 0, collisionCooldown: 0 },
       stops: stopsTemplate.map(s => ({ ...s, history: campaign.addressHistory[s.id]||null, binX: s.x, binY: s.y, binReturned: false, state: "waiting", authorized: false, revealed: false, wobble: randomSeeded(s.id+campaign.shifts*13) * 6 })),
       waste: wasteTemplate.map(w => ({ ...w, state: "waiting", integrity: 1, angle: w.type === "bulk" ? -.08 : 0 })),
-      traffic: trafficTemplate.map(t => ({ ...t })),
+      traffic: trafficTemplate.filter((_,index)=>!assists.lightTraffic||index%2===0).map(t => ({ ...t })),
       obstacles: obstacleTemplate.map(o => ({ ...o }))
     };
     ui.start.classList.remove("hidden");
@@ -157,7 +171,7 @@
     return game.rngState / 4294967296;
   }
   function recordEvent(type, details = {}) {
-    game.events.push({ type, at: Number((SHIFT_DURATION - game.time).toFixed(2)), ...details });
+    game.events.push({ type, at: Number((game.duration - game.time).toFixed(2)), ...details });
   }
 
   function ensureAudio() {
@@ -510,7 +524,7 @@
       ["Route familiarity", familiarityBonus],
       ["Compactor operation", compactions * 25], ["Spill recovery", game.cleanedSpills * 40],
       ["Loose bags loaded", loadedBags * 35], ["Oversized items loaded", loadedBulk * 55],
-      ["Time remaining", Math.floor(game.time) * 2], ["Incorrect tags", -wrongTagPenalty],
+      ["Time remaining", Math.floor(Math.min(SHIFT_DURATION,game.time)) * 2], ["Incorrect tags", -wrongTagPenalty],
       ["Contaminated loads", game.badLoads * -90], ["Missed stops", missed * -80],
       ["Handling slips", game.handlingDrops * -20], ["Spills created", game.spills * -70],
       ["Truck damage", game.damage * -45], ["Traffic stumbles", game.workerStumbles * -25]
@@ -529,11 +543,12 @@
       ["Score", game.score], ["Collected", `${game.collected}/${TOTAL_STOPS}`],
       ["Correct tags", game.stops.filter(s => s.state === "tagged" && s.contaminated).length],
       ["Handling slips", game.handlingDrops], ["Waste loaded", `${loadedBags+loadedBulk}/2`], ["Traffic stumbles", game.workerStumbles], ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
-      ["Credits earned", `$${game.earnings}`], ["Town trust", campaign.trust], ["Shift seed", game.seed], ["Events logged", game.events.length]
+      ["Credits earned", `$${game.earnings}`], ["Town trust", campaign.trust], ["Assists", activeAssistNames().length], ["Shift seed", game.seed], ["Events logged", game.events.length]
     ].map(([a, b]) => `<span><b>${a}</b><br>${b}</span>`).join("");
     ui.resultLedger.innerHTML = scoreLines.filter(line => line[1] !== 0).map(([label, value]) =>
       `<div class="${value < 0 ? "negative" : "positive"}"><span>${label}</span><b>${value > 0 ? "+" : ""}${value}</b></div>`
     ).join("");
+    ui.playtestReport.textContent=buildPlaytestReport(timedOut);
     ui.result.classList.remove("hidden");
     setStatus("Shift filed. Press Enter or Return to depot.");
     beep(game.complaints ? 170 : 560, .35, "triangle", .06);
@@ -551,6 +566,23 @@
       campaign.addressHistory[stop.id]={scheduled:(previous.scheduled||0)+1,visits:previous.visits+(stop.state!=="waiting"?1:0),complaints:previous.complaints+(complaint?1:0),cleanStreak:clean?previous.cleanStreak+1:0,lastOutcome:outcome};
     }
     const earned=Math.max(75,Math.min(900,Math.floor(game.score*.28)));game.earnings=earned;campaign.credits+=earned;campaign.shifts+=1;campaign.bestScore=Math.max(campaign.bestScore,game.score);campaign.trust=Math.max(0,Math.min(100,campaign.trust+(game.complaints===0?3:-Math.min(12,game.complaints*2))));campaign.lastShift={score:game.score,earned,complaints:game.complaints,at:new Date().toISOString()};saveCampaign();renderDepot();
+  }
+
+  function buildPlaytestReport(timedOut){
+    const first=type=>{const event=game.events.find(item=>item.type===type);return event?`${event.at}s`:"—";};
+    const resolved=game.events.filter(event=>["stop_collected","stop_tagged"].includes(event.type));
+    const order=resolved.map(event=>stopsTemplate.find(stop=>stop.id===event.stopId)?.label||event.stopId).join(" → ")||"none";
+    const lines=[
+      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.11.0",
+      `Shift ${campaign.shifts} · seed ${game.seed} · ${timedOut?"clock expired":unresolved()?"ended early":"route complete"}`,
+      `Assists: ${activeAssistNames().join(", ")||"none"}`,
+      `Elapsed: ${Math.round(game.duration-game.time)}s / ${game.duration}s · score ${game.score} · complaints ${game.complaints}`,
+      `First movement ${first("first_movement")} · cab exit ${first("cab_exited")} · inspection ${first("stop_inspected")} · resolution ${resolved[0]?`${resolved[0].at}s`:"—"}`,
+      `Resolved ${TOTAL_STOPS-unresolved()}/${TOTAL_STOPS} · order: ${order}`,
+      `Compactions ${game.events.filter(e=>e.type==="compactor_cycled").length} · collisions ${game.events.filter(e=>e.type==="collision").length} · handling slips ${game.handlingDrops}`,
+      `Spills ${game.spills} · cleaned ${game.cleanedSpills} · traffic stumbles ${game.workerStumbles} · truck damage ${game.damage}`,
+      `Credits +$${game.earnings} · trust ${campaign.trust} · upgrades ${UPGRADES.filter(u=>campaign.upgrades[u.id]).map(u=>u.name).join(", ")||"none"}`
+    ];return lines.join("\n");
   }
 
   function update(dt) {
@@ -725,8 +757,8 @@
       if (carriedWaste?.type === "bulk") {
         let turn = Math.abs(nextAngle - w.lastMoveAngle);
         if (turn > Math.PI) turn = Math.PI * 2 - turn;
-        if (turn > 1.7) w.carryStress += braced ? .05 : .24;
-        w.carryStress += dt * (braced ? -.22 : .23);
+        if (turn > 1.7) w.carryStress += braced ? .05 : (game.assists.handlingAssist ? .15 : .24);
+        w.carryStress += dt * (braced ? -.22 : (game.assists.handlingAssist ? .15 : .23));
       }
       w.angle = nextAngle;
       w.lastMoveAngle = nextAngle;
@@ -830,17 +862,17 @@
     if (!load) return;
     load.driftTimer -= dt;
     if (load.driftTimer <= 0) {
-      load.drift = (random() - .5) * 1.15;
+      load.drift = (random() - .5) * 1.15 * (game.assists.handlingAssist ? .72 : 1);
       load.driftTimer = .55 + random() * .65;
     }
     const control = (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0) - (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0);
-    load.balance += (load.drift + control * 1.75) * dt;
+    load.balance += (load.drift + control * (game.assists.handlingAssist?1.95:1.75)) * dt;
     load.balance *= Math.pow(.985, dt * 60);
     if (keys.has("Space")) {
-      const stability = Math.max(.18, 1 - Math.abs(load.balance) * .72);
+      const stability = Math.max(game.assists.handlingAssist ? .28 : .18, 1 - Math.abs(load.balance) * .72);
       load.progress = Math.min(1, load.progress + dt * .48 * (campaign.upgrades.hydraulicAssist?1.28:1) * stability);
     }
-    if (Math.abs(load.balance) > 1.05) {
+    if (Math.abs(load.balance) > (game.assists.handlingAssist?1.18:1.05)) {
       load.drops += 1;
       game.handlingDrops += 1;
       game.score -= 20;
@@ -864,6 +896,7 @@
     const reverse = keys.has("ArrowDown") || keys.has("KeyS");
     const left = keys.has("ArrowLeft") || keys.has("KeyA");
     const right = keys.has("ArrowRight") || keys.has("KeyD");
+    if((forward||reverse)&&game.metrics.firstMovement===null){game.metrics.firstMovement=Number((game.duration-game.time).toFixed(2));recordEvent("first_movement",{mode:"truck"});}
     if (forward) t.speed += 115 * (campaign.upgrades.winterTires?1.1:1) * dt;
     if (reverse) t.speed -= 92 * dt;
     if (!forward && !reverse) t.speed *= Math.pow(.16, dt);
@@ -939,8 +972,9 @@
 
   function draw() {
     ctx.save();
-    const shakeX = game?.shake ? (Math.random() - .5) * game.shake * 12 : 0;
-    const shakeY = game?.shake ? (Math.random() - .5) * game.shake * 12 : 0;
+    const shakeScale=game?.assists?.reducedShake ? .22 : 1;
+    const shakeX = game?.shake ? (Math.random() - .5) * game.shake * 12 * shakeScale : 0;
+    const shakeY = game?.shake ? (Math.random() - .5) * game.shake * 12 * shakeScale : 0;
     ctx.translate(shakeX, shakeY);
     ctx.save();
     ctx.translate(-(game?.cameraX||0),0);
@@ -1267,12 +1301,23 @@
   document.querySelector("#resumeButton").addEventListener("click", () => togglePause());
   document.querySelector("#restartButton").addEventListener("click", resetGame);
   ui.upgradeList.addEventListener("click",event=>{const button=event.target.closest("[data-upgrade]");if(button)buyUpgrade(button.dataset.upgrade);});
-  ui.resetCareer.addEventListener("click",()=>{if(!confirm("Reset all local crew history, credits, trust, and upgrades?"))return;campaign=defaultCampaign();try{localStorage.removeItem(SAVE_KEY);}catch(_){}ui.vehicleVolume.value=campaign.settings.vehicle;ui.streetVolume.value=campaign.settings.street;ui.effectsVolume.value=campaign.settings.effects;resetGame();syncAudioMix();});
+  ui.resetCareer.addEventListener("click",()=>{if(!confirm("Reset all local crew history, credits, trust, upgrades, and settings?"))return;campaign=defaultCampaign();try{localStorage.removeItem(SAVE_KEY);}catch(_){}applyCampaignSettings();resetGame();syncAudioMix();});
   function toggleMute() { muted=!muted;if(!muted)ensureAudio();syncAudioMix();ui.mute.textContent=`Sound: ${muted?"off":"on"}`;ui.mute.setAttribute("aria-pressed", String(muted));if(audio)ui.audioStatus.textContent=muted?"Muted // mix preserved":"Active // 3 buses"; }
   ui.mute.addEventListener("click", toggleMute);
   for(const slider of [ui.vehicleVolume,ui.streetVolume,ui.effectsVolume])slider.addEventListener("input",()=>{ensureAudio();syncAudioMix();saveCampaign();});
+  for(const option of [ui.relaxedClock,ui.handlingAssist,ui.lightTraffic,ui.reducedShake,ui.highContrast])option.addEventListener("change",()=>{document.body.classList.toggle("high-contrast",ui.highContrast.checked);saveCampaign();setStatus("Shift setup saved. Changes apply when the next shift begins.");});
+  ui.copyReport.addEventListener("click",async()=>{
+    try{
+      await navigator.clipboard.writeText(ui.playtestReport.textContent);
+      ui.copyReport.textContent="Copied";
+      setTimeout(()=>{ui.copyReport.textContent="Copy report";},1400);
+    }catch(_){
+      const selection=getSelection();const range=document.createRange();range.selectNodeContents(ui.playtestReport);selection.removeAllRanges();selection.addRange(range);ui.copyReport.textContent="Report selected";
+      setTimeout(()=>{ui.copyReport.textContent="Copy report";},1800);
+    }
+  });
 
-  ui.vehicleVolume.value=campaign.settings.vehicle;ui.streetVolume.value=campaign.settings.street;ui.effectsVolume.value=campaign.settings.effects;
+  applyCampaignSettings();
   resetGame();
   requestAnimationFrame(frame);
 })();

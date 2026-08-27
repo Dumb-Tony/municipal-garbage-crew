@@ -12,6 +12,7 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Results and consequences | Score, misses, complaints, spills, damage | S | Route loop |
 | Done | Deterministic shift seed + event ledger | Reproducible route decisions and structured event history | S | Current slice |
 | Done | Itemized result ledger | Auditable end-of-shift score | S | Event ledger |
+| Done | Copyable solo playtest report | Comparable seed, timing, route, consequence, and assist evidence | S | Event ledger |
 | P0 | Event-driven score reducer | Replay-safe score mutations and rule tests | M | Event ledger |
 | Done | Spill recovery interaction | Mistake becomes new work, not only penalty | M | Event ledger |
 | Done | Ambiguous contamination inspection | Genuine time-versus-certainty decision | M | Event ledger |
@@ -29,7 +30,7 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Layered Web Audio mix | Responsive truck, work, traffic, weather and neighborhood buses | L | Scrolling district |
 | P1 | Truck safe-move interlock | Driver/loader coordination | M | Loader greybox |
 | P1 | Two-player browser/network test scene | Validate role interplay and authority | XL | Browser handling proof |
-| P1 | Accessibility settings baseline | Shake, contrast, holds, clock, alarms | M | Input/camera/audio |
+| Done | Accessibility settings baseline | Persistent shake, contrast, clock, traffic, and handling options | M | Input/camera/audio |
 | P2 | Variable stop definitions and seeds | Replayable authored route envelope | M | Event ledger |
 | Done | Persistent address history | Versioned outcomes, complaints, clean streaks and familiarity | L | Save versioning |
 | Done | Depot/upgrades slice | Credits, trust, rank, three upgrades and shift return loop | L | Route outcomes |
@@ -81,6 +82,7 @@ Only after M5 passes: two players, driver/loader handoff, safe-move call, shared
 - Moving traffic and blocked curb affect positioning; collision records damage.
 - Collision with a sufficiently loose load can create a visible spill and penalty.
 - Timer, score, route progress, capacity, complaint count, result summary, and restart are present.
+- Every filed shift produces a selectable/copyable report containing its seed, active assists, key onboarding times, route order, failures, recovery, and outcome.
 
 ### Experience
 
@@ -91,6 +93,8 @@ Only after M5 passes: two players, driver/loader handoff, safe-move call, shared
 - The player encounters capacity pressure but can finish without a forced bad load.
 - Screen remains legible at 960×600 internal resolution and at 680 CSS pixels wide.
 - Decision actions work by key and clickable button; sound can be muted; reduced-motion preference removes overlay rotation.
+- Relaxed clock adds two minutes without increasing the time-bonus ceiling; handling assist and light traffic reduce difficulty without removing hazards.
+- Reduced shake and high contrast apply visibly, persist across reloads, and do not change the route score.
 
 ### Quality
 
@@ -259,6 +263,9 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Return to depot and reload; verify the same crew file, last-shift report, audio mix, and address ledger remain.
 - [ ] Accumulate credits and buy each upgrade in separate test saves; verify cost, installed state, rank, reload persistence, and advertised mechanical effect.
 - [ ] Verify Hydraulic Assist changes lift rate, Hopper Baffles changes both limit and HUD, and Winter Tires changes handling and spill probability without removing risk.
+- [ ] Toggle every shift-setup option, reload, and verify its checked state and visible/mechanical effect persist.
+- [ ] Compare identical early closures with and without Relaxed Clock; duration changes from 600 to 720 seconds while the maximum time bonus remains +1200.
+- [ ] File a complete, partial, and timed-out route; expand and copy each playtest report, verifying seed, assists, timings, route order, outcome, and progression values against the results screen.
 
 ### Boundary and state cases
 
@@ -281,12 +288,13 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (manual in 0.10.0)
+### Playtest telemetry (generated in 0.11.0)
 
-Record: shift seed, time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, event count, restart choice, and a one-sentence causal account of the worst mistake.
+The results screen generates a copyable report containing the shift seed, active assists, elapsed time, first movement/cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, spills and cleanup, stumbles, damage, score, complaints, credits, trust, and installed upgrades. The observer still records confusion, voluntary retry, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
 
 ## Explicit next implementation tasks
 
-1. Tune the forgiving solo loop through observed playtests, then fix clarity, pacing, economy, accessibility, and audio fatigue before adding network code.
-2. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
-3. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo, persistence migrations, and stop-state invariants.
+1. Run at least five fresh external solo sessions on build 0.11.0, collecting the generated report plus observer notes for each.
+2. Tune clarity, pacing, economy, accessibility, and audio fatigue from that evidence, then repeat any failed M5 exit checks.
+3. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
+4. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo, persistence migrations, and stop-state invariants.

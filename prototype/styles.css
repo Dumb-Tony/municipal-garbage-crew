@@ -51,6 +51,10 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; outline
 .depot-stats span { padding: 7px; background: #131719; color: #777e78; font: .57rem/1.25 "Courier New",monospace; text-transform: uppercase; }
 .depot-stats b { color: #e0a44d; font-size: 1rem; }
 .depot-note { margin: 8px 0 0; color: #999d97; font: .62rem/1.35 "Courier New",monospace; }
+.shift-assists { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin: 10px 0; padding: 8px; border: 1px solid #353b37; }
+.shift-assists legend { padding: 0 5px; color: #b38a53; font: 700 .58rem/1 "Courier New",monospace; text-transform: uppercase; }
+.shift-assists label { color: #969d96; font: .54rem/1.25 "Courier New",monospace; text-transform: uppercase; }
+.shift-assists input { accent-color: var(--amber); vertical-align: middle; }
 .upgrade-list { display: grid; gap: 5px; }
 .upgrade-card { display: grid; grid-template-columns: 1fr auto; gap: 5px 8px; align-items: center; padding: 7px 8px; background: #111618; border-left: 2px solid #545e4a; }
 .upgrade-card b { color: #c8c4b7; font: 800 .63rem/1.2 "Courier New",monospace; text-transform: uppercase; }
@@ -88,6 +92,10 @@ button:focus-visible { outline: 2px solid #f1e2bf; outline-offset: 3px; }
 .result-ledger div { display: flex; justify-content: space-between; gap: 20px; padding: 5px 2px; border-bottom: 1px solid rgba(255,255,255,.07); }
 .result-ledger .negative { color: #dc816d; }
 .result-ledger .positive { color: #b8c576; }
+.playtest-report { margin: 0 0 14px; padding: 8px 10px; border: 1px solid #3f443f; color: #9b9f98; font: .68rem/1.3 "Courier New",monospace; }
+.playtest-report summary { color: #c18e4b; cursor: pointer; text-transform: uppercase; }
+.playtest-report pre { max-height: 150px; overflow: auto; white-space: pre-wrap; color: #aeb2aa; }
+.playtest-report button { padding: 7px 10px; font-size: .58rem; }
 kbd { font-family: inherit; border: 1px solid currentColor; padding: 1px 5px; }
 
 .footer-note { align-items: center; margin-top: 12px; padding: 0 4px; color: #717875; font: .68rem/1.2 "Courier New", monospace; letter-spacing: .04em; }
@@ -104,6 +112,8 @@ kbd { font-family: inherit; border: 1px solid currentColor; padding: 1px 5px; }
 .audio-mixer-panel input { width: 100%; accent-color: var(--amber); }
 .audio-mixer-panel output { display: block; margin-top: 6px; padding-top: 6px; border-top: 1px solid #373a37; color: #7f897e; font-size: .58rem; text-transform: uppercase; }
 .hidden { display: none !important; }
+body.high-contrast canvas { filter: saturate(1.02) contrast(1.28) brightness(1.05); }
+body.high-contrast .game-frame { border-color: #d49a4d; }
 
 @media (max-width: 780px) {
   .shell { padding: 10px; }
