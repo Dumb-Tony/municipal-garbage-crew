@@ -15,7 +15,7 @@
   <title>Municipal Garbage Crew — First Route</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/bsa-icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=0.17.0">
+  <link rel="stylesheet" href="styles.css?v=0.18.0">
 </head>
 <body>
   <main class="shell">
@@ -72,7 +72,7 @@
           <span><b>C / X</b> Compact / clean spill</span>
           <span><b>Hold Space + A/D</b> Lift / balance bin</span>
         </div>
-        <button id="startButton" type="button">Begin route <span>›</span></button>
+        <button id="startButton" type="button">Begin route <span>Enter ›</span></button>
       </div>
       <div id="decisionPanel" class="decision-card hidden" role="dialog" aria-live="polite" aria-labelledby="decisionTitle">
         <p class="eyebrow">BSA COLLECTION PROTOCOL // CURBSIDE CHECK</p>
@@ -90,6 +90,17 @@
         <p>The route clock and traffic are stopped.</p>
         <button id="resumeButton" type="button">Resume shift</button>
       </div>
+      <div id="closeShiftPanel" class="overlay-card compact-card hidden" role="dialog" aria-modal="true" aria-live="assertive" aria-labelledby="closeShiftTitle">
+        <p class="stamp">BSA FORM 09-C // EARLY ROUTE CLOSURE</p>
+        <h2 id="closeShiftTitle">File missed pickups?</h2>
+        <p id="closeShiftSummary" class="closure-impact"></p>
+        <p>The route will remain paused while you decide. Filed complaints and town-trust changes cannot be undone.</p>
+        <div class="confirmation-actions">
+          <button id="keepWorkingButton" type="button">Keep working</button>
+          <button id="fileShiftButton" class="danger-action" type="button">File shift anyway</button>
+        </div>
+        <small>Escape returns to the route.</small>
+      </div>
       <div id="resultPanel" class="overlay-card hidden" role="dialog" aria-live="polite">
         <p class="stamp">BSA FORM 22-B // SHIFT REPORT</p>
         <h2 id="resultTitle">Route complete</h2>
@@ -106,7 +117,7 @@
     </section>
 
     <footer class="footer-note">
-      <span>BUILD 0.17.0 // OFFLINE SHIFT</span>
+      <span>BUILD 0.18.0 // SAFE CLOSE</span>
       <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
       <div class="footer-actions">
         <span id="offlineStatus" class="offline-status" aria-live="polite">Preparing offline cache</span>
@@ -120,17 +131,17 @@
             <output id="audioStatus" aria-live="polite">Starts when route begins</output>
           </div>
         </details>
-        <button id="endShiftButton" class="text-button" type="button">End shift</button>
+        <button id="endShiftButton" class="text-button" type="button" aria-haspopup="dialog">End shift</button>
         <button id="pauseButton" class="text-button" type="button">Pause</button>
         <button id="muteButton" class="text-button" type="button" aria-pressed="false">Sound: on</button>
       </div>
     </footer>
   </main>
-  <script src="rules.js?v=0.17.0" defer></script>
-  <script src="input.js?v=0.17.0" defer></script>
-  <script src="timing.js?v=0.17.0" defer></script>
-  <script src="contracts.js?v=0.17.0" defer></script>
-  <script src="game.js?v=0.17.0" defer></script>
-  <script src="pwa.js?v=0.17.0" defer></script>
+  <script src="rules.js?v=0.18.0" defer></script>
+  <script src="input.js?v=0.18.0" defer></script>
+  <script src="timing.js?v=0.18.0" defer></script>
+  <script src="contracts.js?v=0.18.0" defer></script>
+  <script src="game.js?v=0.18.0" defer></script>
+  <script src="pwa.js?v=0.18.0" defer></script>
 </body>
 </html>

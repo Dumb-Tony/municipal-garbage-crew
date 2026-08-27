@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.17.0
+**Build:** 0.18.0
 **Tester:**  
 **Date / browser:**  
 **Shift setup / assists:**
@@ -30,7 +30,7 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Did the chosen contract feel mechanically distinct without becoming unfair?
 - Could they explain an address-history note on the next shift?
 - Upgrade purchased / expected effect / noticed effect:
-- Did “End shift” feel like a useful recovery choice or an accidental trap?
+- Did the End Shift preview explain the exact consequences? Did they cancel or confirm, and was either action accidental?
 - First visible confusion:
 - Compactor attempts / successes:
 - Bin handling slips / most difficult lift:

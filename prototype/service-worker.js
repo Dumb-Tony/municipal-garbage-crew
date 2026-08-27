@@ -1,4 +1,4 @@
-importScripts("./pwa.js?v=0.17.0");
+importScripts("./pwa.js?v=0.18.0");
 
 const { CACHE_NAME, CACHE_PREFIX, SHELL_ASSETS } = self.MGCAppShell;
 

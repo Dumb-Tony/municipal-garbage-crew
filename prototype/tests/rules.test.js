@@ -56,6 +56,23 @@ test("campaign rewards and trust remain bounded", () => {
   assert.equal(rules.calculateTrust(50, 3), 44);
 });
 
+test("early closure preview makes every new complaint explicit", () => {
+  assert.deepEqual(rules.earlyClosurePreview({ unresolved: 7, uncleanedSpills: 2, currentComplaints: 1 }), {
+    unresolved: 7,
+    uncleanedSpills: 2,
+    currentComplaints: 1,
+    addedComplaints: 9,
+    totalComplaints: 10
+  });
+  assert.deepEqual(rules.earlyClosurePreview({ unresolved: -3, uncleanedSpills: "bad", currentComplaints: 2 }), {
+    unresolved: 0,
+    uncleanedSpills: 0,
+    currentComplaints: 2,
+    addedComplaints: 0,
+    totalComplaints: 2
+  });
+});
+
 test("stop transition graph permits the service path and rejects terminal mutations", () => {
   const path = ["waiting", "authorized", "loading", "empty", "awaiting-waste", "collected"];
   for (let index = 0; index < path.length - 1; index += 1) {

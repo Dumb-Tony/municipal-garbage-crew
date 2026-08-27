@@ -20,7 +20,7 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.17.0` adds the M5 downloadable web shell. The public build has an install manifest, Bellwether app badge, scoped versioned service worker, explicit offline/install status, browser install action when available, and a network-first cache fallback containing the entire current route. Direct-file play still works without registration. Three contracts, fixed-step handling, progression, and remappable keyboard actions remain intact. The game remains browser-first; Unity is not part of the plan.
+Version `0.18.0` makes route recovery safer and more keyboard-first. Enter starts the selected contract from the depot. End Shift now freezes the route behind an explicit consequence preview, defaults focus to Keep Working, cancels with Escape, and only files missed stops after a second deliberate action. The generated report records requested, cancelled, and confirmed early closures. Installable offline play, three contracts, fixed-step handling, progression, and remappable keyboard actions remain intact. The game remains browser-first; Unity is not part of the plan.
 
 Run `npm test` to verify the offline shell manifest, contract content, fixed-step timing, input mapping, scoring, campaign bounds, address history, and stop-state invariants. No install or build step is required.
 

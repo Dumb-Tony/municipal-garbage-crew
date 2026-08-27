@@ -74,6 +74,20 @@
     return Math.max(0, Math.min(100, next));
   }
 
+  function earlyClosurePreview(input = {}) {
+    const unresolved = integer(input.unresolved);
+    const uncleanedSpills = integer(input.uncleanedSpills);
+    const currentComplaints = integer(input.currentComplaints);
+    const addedComplaints = unresolved + uncleanedSpills;
+    return Object.freeze({
+      unresolved,
+      uncleanedSpills,
+      currentComplaints,
+      addedComplaints,
+      totalComplaints: currentComplaints + addedComplaints
+    });
+  }
+
   function scoreShift(input = {}) {
     const timeRemaining = Math.min(STANDARD_SHIFT_DURATION, nonNegative(input.timeRemaining));
     const lines = [
@@ -107,6 +121,7 @@
     updateAddressHistory,
     calculateEarnings,
     calculateTrust,
+    earlyClosurePreview,
     scoreShift
   });
 });

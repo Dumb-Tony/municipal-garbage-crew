@@ -19,6 +19,10 @@
     decisionText: document.querySelector("#decisionText"),
     inspect: document.querySelector("#inspectButton"),
     pause: document.querySelector("#pausePanel"),
+    closeShift: document.querySelector("#closeShiftPanel"),
+    closeShiftSummary: document.querySelector("#closeShiftSummary"),
+    keepWorking: document.querySelector("#keepWorkingButton"),
+    fileShift: document.querySelector("#fileShiftButton"),
     resultTitle: document.querySelector("#resultTitle"),
     resultSummary: document.querySelector("#resultSummary"),
     resultStats: document.querySelector("#resultStats"),
@@ -163,6 +167,7 @@
       loose: 0,
       compacted: 0,
       compactorCooldown: 0,
+      compactorPhaseTime: 0,
       message: "",
       messageTime: 0,
       activeStop: null,
@@ -170,6 +175,7 @@
       particles: [],
       spillZones: Contracts.prepareSpills(contract.id),
       phaseBeforePause: "DRIVE",
+      phaseBeforeClose: "DRIVE",
       mode: "truck",
       cameraX: 0,
       shake: 0,
@@ -184,6 +190,7 @@
     ui.decision.classList.add("hidden");
     ui.result.classList.add("hidden");
     ui.pause.classList.add("hidden");
+    ui.closeShift.classList.add("hidden");
     renderDepot();
     setStatus("Click “Clock in” to begin.");
   }
@@ -497,13 +504,13 @@
     game.compacted += packed;
     game.loose = 0;
     game.compactorCooldown = 5;
+    game.compactorPhaseTime = .85;
     game.phase = "COMPACT";
     game.shake = .7;
     game.score += 25;
     recordEvent("compactor_cycled", { looseBefore: Number(before.toFixed(2)), compactedAdded: Number(packed.toFixed(2)) });
     showMessage(`Compacted ${before.toFixed(1)} units into ${packed.toFixed(1)}. +25`);
     beep(82, .42, "sawtooth", .055);
-    setTimeout(() => { if (game.phase === "COMPACT") game.phase = "DRIVE"; }, 850);
   }
 
   function checkRouteEnd() {
@@ -566,6 +573,8 @@
     recordEvent("shift_finished", { timedOut, score: game.score, complaints: game.complaints });
     persistShift();
     ui.decision.classList.add("hidden");
+    ui.pause.classList.add("hidden");
+    ui.closeShift.classList.add("hidden");
     ui.resultTitle.textContent = timedOut ? "Shift clock expired" : (game.complaints === 0 ? "Clean route" : "Route closed");
     ui.resultSummary.textContent = game.complaints === 0
       ? "Maple Street is clear, the hopper is under control, and dispatch has nothing to complain about."
@@ -586,7 +595,36 @@
     beep(game.complaints ? 170 : 560, .35, "triangle", .06);
   }
 
-  function endShiftEarly(){if(!game||["READY","RESULT"].includes(game.phase))return;keys.clear();ui.pause.classList.add("hidden");finishGame(false);}
+  function requestEarlyClose(){
+    if(!game||["READY","RESULT","CONFIRM_CLOSE"].includes(game.phase))return;
+    const preview=Rules.earlyClosurePreview({unresolved:unresolved(),uncleanedSpills:uncleanedSpills(),currentComplaints:game.complaints});
+    game.phaseBeforeClose=game.phase;
+    game.phase="CONFIRM_CLOSE";
+    keys.clear();
+    ui.pause.classList.add("hidden");
+    ui.closeShiftSummary.textContent=`Ending now adds ${preview.addedComplaints} complaint${preview.addedComplaints===1?"":"s"}: ${preview.unresolved} missed stop${preview.unresolved===1?"":"s"} and ${preview.uncleanedSpills} uncleared spill${preview.uncleanedSpills===1?"":"s"}. Total complaints: ${preview.totalComplaints}.`;
+    ui.closeShift.classList.remove("hidden");
+    recordEvent("early_close_requested",preview);
+    setStatus("Early closure paused. Keep working or file the listed complaints.");
+    ui.keepWorking.focus();
+  }
+
+  function cancelEarlyClose(){
+    if(game?.phase!=="CONFIRM_CLOSE")return;
+    const resumePhase=game.phaseBeforeClose||"DRIVE";
+    game.phase=resumePhase;
+    ui.closeShift.classList.add("hidden");
+    recordEvent("early_close_cancelled",{resumePhase});
+    if(resumePhase==="PAUSED")ui.pause.classList.remove("hidden");
+    else canvas.focus();
+    setStatus(resumePhase==="PAUSED"?"Shift remains paused.":"Early closure cancelled. Keep working the route.");
+  }
+
+  function confirmEarlyClose(){
+    if(game?.phase!=="CONFIRM_CLOSE")return;
+    recordEvent("early_close_confirmed",{unresolved:unresolved(),uncleanedSpills:uncleanedSpills()});
+    finishGame(false);
+  }
 
   function persistShift(){
     if(game.persisted)return;game.persisted=true;
@@ -603,7 +641,7 @@
     const averageFrame=game.metrics.frameCount?game.metrics.totalFrameMs/game.metrics.frameCount:0;
     const averageFps=averageFrame?Math.round(1000/averageFrame):0;
     const lines=[
-      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.17.0",
+      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.18.0",
       `Shift ${campaign.shifts} · ${game.contract.name} · pay ×${game.contract.payoutMultiplier.toFixed(2)} · seed ${game.seed} · ${timedOut?"clock expired":unresolved()?"ended early":"route complete"}`,
       `Assists: ${activeAssistNames().join(", ")||"none"}`,
       `Bindings: move ${["forward","left","reverse","right"].map(keyLabel).join("/")} · work ${keyLabel("work")} · grab ${keyLabel("grab")} · cab ${keyLabel("cab")} · tag ${keyLabel("tag")} · check ${keyLabel("inspect")} · compact ${keyLabel("compact")} · clean ${keyLabel("cleanup")} · brace ${keyLabel("brace")}`,
@@ -611,6 +649,7 @@
       `First movement ${first("first_movement")} · cab exit ${first("cab_exited")} · inspection ${first("stop_inspected")} · resolution ${resolved[0]?`${resolved[0].at}s`:"—"}`,
       `Resolved ${TOTAL_STOPS-unresolved()}/${TOTAL_STOPS} · order: ${order}`,
       `Compactions ${game.events.filter(e=>e.type==="compactor_cycled").length} · collisions ${game.events.filter(e=>e.type==="collision").length} · handling slips ${game.handlingDrops}`,
+      `Early closure prompts ${game.events.filter(e=>e.type==="early_close_requested").length} · cancelled ${game.events.filter(e=>e.type==="early_close_cancelled").length} · confirmed ${game.events.filter(e=>e.type==="early_close_confirmed").length}`,
       `Spills caused ${game.spills} · assigned ${game.jobSpills} · cleaned ${game.cleanedSpills}/${game.spills+game.jobSpills} · traffic stumbles ${game.workerStumbles} · truck damage ${game.damage}`,
       `Performance ${averageFps||"—"} fps avg · worst ${Math.round(game.metrics.worstFrameMs)}ms · slow frames ${game.metrics.longFrames}/${game.metrics.frameCount} · sim 60Hz/${game.metrics.simulationSteps} steps · dropped ${Math.round(game.metrics.droppedSimulationMs)}ms · view ${innerWidth}×${innerHeight}@${devicePixelRatio}`,
       `Credits +$${game.earnings} · trust ${campaign.trust} · upgrades ${UPGRADES.filter(u=>campaign.upgrades[u.id]).map(u=>u.name).join(", ")||"none"}`
@@ -620,10 +659,14 @@
   function update(dt) {
     if (!game) return;
     updateAudio(dt);
-    if (game.phase === "READY" || game.phase === "RESULT" || game.phase === "PAUSED") return;
+    if (["READY", "RESULT", "PAUSED", "CONFIRM_CLOSE"].includes(game.phase)) return;
     game.time = Math.max(0, game.time - dt);
     game.messageTime = Math.max(0, game.messageTime - dt);
     game.compactorCooldown = Math.max(0, game.compactorCooldown - dt);
+    if (game.phase === "COMPACT") {
+      game.compactorPhaseTime = Math.max(0, game.compactorPhaseTime - dt);
+      if (game.compactorPhaseTime === 0) game.phase = "DRIVE";
+    }
     game.shake = Math.max(0, game.shake - dt);
     if (game.time <= 0) { finishGame(true); return; }
 
@@ -1290,7 +1333,7 @@
 
   function frame(now) {
     const rawFrameMs=last?now-last:0;last=now;
-    const activeFrame=rawFrameMs>0&&game&&!['READY','RESULT','PAUSED'].includes(game.phase);
+    const activeFrame=rawFrameMs>0&&game&&!['READY','RESULT','PAUSED','CONFIRM_CLOSE'].includes(game.phase);
     if(activeFrame){
       game.metrics.frameCount+=1;game.metrics.totalFrameMs+=rawFrameMs;game.metrics.worstFrameMs=Math.max(game.metrics.worstFrameMs,rawFrameMs);if(rawFrameMs>34)game.metrics.longFrames+=1;
     }
@@ -1300,7 +1343,7 @@
   }
 
   function togglePause(forcePause = false) {
-    if (!game || game.phase === "READY" || game.phase === "RESULT") return;
+    if (!game || game.phase === "READY" || game.phase === "RESULT" || game.phase === "CONFIRM_CLOSE") return;
     if (game.phase === "PAUSED" && !forcePause) {
       game.phase = game.phaseBeforePause;
       ui.pause.classList.add("hidden");
@@ -1352,6 +1395,13 @@
 
   addEventListener("keydown", event => {
     if (rebindingAction) { event.preventDefault(); captureBinding(event.code); return; }
+    if(game?.phase==="CONFIRM_CLOSE"){
+      if(event.code==="Escape"){event.preventDefault();cancelEarlyClose();}
+      else if(["Enter","Space"].includes(event.code)&&document.activeElement===ui.keepWorking){event.preventDefault();cancelEarlyClose();}
+      else if(["Enter","Space"].includes(event.code)&&document.activeElement===ui.fileShift){event.preventDefault();confirmEarlyClose();}
+      return;
+    }
+    if(event.code==="Enter"&&game?.phase==="READY"){event.preventDefault();startGame();return;}
     const action = Input.actionForCode(event.code, campaign.settings.bindings);
     if (action || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(event.code)) event.preventDefault();
     keys.add(event.code);
@@ -1375,7 +1425,9 @@
   document.querySelector("#tagButton").addEventListener("click", tagActive);
   document.querySelector("#inspectButton").addEventListener("click", inspectCloser);
   document.querySelector("#pauseButton").addEventListener("click", () => togglePause());
-  ui.endShift.addEventListener("click",endShiftEarly);
+  ui.endShift.addEventListener("click",requestEarlyClose);
+  ui.keepWorking.addEventListener("click",cancelEarlyClose);
+  ui.fileShift.addEventListener("click",confirmEarlyClose);
   document.querySelector("#resumeButton").addEventListener("click", () => togglePause());
   document.querySelector("#restartButton").addEventListener("click", resetGame);
   ui.upgradeList.addEventListener("click",event=>{const button=event.target.closest("[data-upgrade]");if(button)buyUpgrade(button.dataset.upgrade);});

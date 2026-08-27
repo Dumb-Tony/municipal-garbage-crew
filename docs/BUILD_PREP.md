@@ -281,6 +281,7 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Set Truck, Street, and Effects sliders independently to zero and maximum; only the selected bus changes.
 - [ ] Pause and finish a shift; continuous engine, wind, and hum layers ramp down rather than stopping with a click.
 - [ ] End a partial shift; verify missed stops, credits, trust, address outcomes, shift number, and result summary agree.
+- [ ] Request End Shift during driving, inspection, loading, and pause; verify time and traffic freeze, the preview matches unresolved stops/spills/current complaints, Keep Working has focus, Escape restores the exact prior state, and only File Shift Anyway persists consequences.
 - [ ] Return to depot and reload; verify the same crew file, last-shift report, audio mix, and address ledger remain.
 - [ ] Accumulate credits and buy each upgrade in separate test saves; verify cost, installed state, rank, reload persistence, and advertised mechanical effect.
 - [ ] Verify Hydraulic Assist changes lift rate, Hopper Baffles changes both limit and HUD, and Winter Tires changes handling and spill probability without removing risk.
@@ -319,13 +320,13 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (generated in 0.17.0)
+### Playtest telemetry (generated in 0.18.0)
 
 The results screen generates a copyable report containing contract and payout modifier, shift seed, active assists, active primary bindings, elapsed time, first movement from either control mode, cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, caused/assigned/cleaned spills, stumbles, damage, score, complaints, credits, trust, installed upgrades, average frame rate, worst frame, slow-frame count, fixed simulation-step count, discarded stall time, viewport, and display pixel ratio. The observer still records confusion, voluntary retry, contract clarity, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
 
 ## Explicit next implementation tasks
 
-1. Run at least five fresh external solo sessions on build 0.17.0, collecting the generated report plus observer notes; use Maple Regular for the comparable first run and allow voluntary contract selection on retries.
+1. Run at least five fresh external solo sessions on build 0.18.0, collecting the generated report plus observer notes; use Maple Regular for the comparable first run and allow voluntary contract selection on retries.
 2. Tune clarity, pacing, economy, accessibility, and audio fatigue from that evidence, then repeat any failed M5 exit checks.
 3. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
 4. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo, persistence migrations, and stop-state invariants.
