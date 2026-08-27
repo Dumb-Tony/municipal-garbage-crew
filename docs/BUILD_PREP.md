@@ -18,13 +18,14 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Pause/focus safety | Fair standalone play when focus changes | S | Current input |
 | Done | Hands-on bin handling | Hold-to-lift, counter-sway, slip recovery and penalty | M | Route loop |
 | Done | Safe route spawn/collision pass | No immediate traffic damage; road-constrained driving | S | Truck movement |
+| Done | PS2-era urban-noir presentation target | Cohesive title, world, weather, vehicle, HUD, overlay, and social-preview art direction | L | Current slice |
 | P0 | Remappable input/gamepad layer | Device-independent actions | M | Current input |
 | P0 | Five-person usability playtest | Evidence for M0 decision | S | Current slice |
 | P1 | On-foot loader greybox | Validate walk/grab/tilt/tip | L | Input abstraction |
 | P1 | Container physics model | Mass, wheels, grip, integrity, tip state | L | Loader greybox |
 | P1 | One bag and rupture/cleanup | Core systemic comedy/recovery | M | Container physics |
 | P1 | Truck safe-move interlock | Driver/loader coordination | M | Loader greybox |
-| P1 | Two-player local/network test scene | Validate role interplay and authority | XL | Unity greybox |
+| P1 | Two-player browser/network test scene | Validate role interplay and authority | XL | Browser handling proof |
 | P1 | Accessibility settings baseline | Shake, contrast, holds, clock, alarms | M | Input/camera/audio |
 | P2 | Variable stop definitions and seeds | Replayable authored route envelope | M | Event ledger |
 | P2 | Persistent address history | Complaints and trust affect later shifts | L | Save versioning |
@@ -41,13 +42,13 @@ Exit when five fresh players can start without instruction, at least four finish
 
 ### M1 — Tactile proof (2–3 weeks)
 
-One Unity room/block, one character, one wheeled cart, one bag, rear hopper, grab/brace/tip, rupture, cleanup, and accessibility toggles. Exit when a novice can move and empty a cart within 60 seconds; weight differences are correctly ranked in 4/5 blind comparisons; failed handling remains attributable; and the same inputs support mouse/keyboard and controller.
+One browser sandbox/block, one loader, one wheeled cart, one bag, rear hopper, grab/brace/tip, rupture, cleanup, and accessibility toggles. Exit when a novice can move and empty a cart within 60 seconds; weight differences are correctly ranked in 4/5 blind comparisons; failed handling remains attributable; and the same inputs support mouse/keyboard and controller.
 
 ### M2 — Cooperation proof (3–5 weeks)
 
 Two players, one drives and both may handle; safe-move call, riding position, shared grab, hopper control, latency simulation. Exit when ten 12-minute sessions show meaningful spoken/nonverbal coordination, no role is idle for more than 20% of the route, and 150 ms simulated latency does not create frequent unrecoverable objects.
 
-### M3 — Unity route proof (6–8 weeks)
+### M3 — Browser route expansion (6–8 weeks)
 
 One Maple district, 8–12 variable stops, basic traffic, contamination, capacity, results, deterministic seed. Exit at stable target performance on minimum-spec PC, <1 blocking defect per five sessions, and evidence that route knowledge improves the second run.
 
@@ -189,19 +190,17 @@ prototype/tests/
 
 Do not introduce a framework until multiple screens or tools create a concrete need. A lightweight test runner is justified before simulation extraction; production bundling is justified only when module count/browser deployment warrants it.
 
-Suggested Unity structure:
+Suggested expanded browser structure:
 
 ```text
-Assets/Game/
-  Art/ Audio/ Prefabs/ Scenes/
-  Data/RouteDefinitions/ WasteDefinitions/ VehicleDefinitions/
-  Scripts/
-    Simulation/ Interactions/ Vehicles/ Waste/ Routes/
-    Networking/ Presentation/ UI/ Persistence/ Accessibility/
-  Tests/EditMode/ PlayMode/ Network/
+prototype/
+  assets/art/ audio/ textures/
+  src/content/ simulation/ interactions/ vehicles/ waste/ routes/
+  src/networking/ presentation/ ui/ persistence/ accessibility/
+  tests/unit/ integration/ browser/
 ```
 
-Assembly definitions should separate pure simulation, Unity presentation, networking, and tests.
+Module boundaries should separate pure simulation, Canvas presentation, networking, persistence, and tests.
 
 ## Test and QA checklist
 
@@ -247,7 +246,7 @@ Assembly definitions should separate pure simulation, Unity presentation, networ
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (manual in 0.4.0)
+### Playtest telemetry (manual in 0.5.0)
 
 Record: shift seed, time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, event count, restart choice, and a one-sentence causal account of the worst mistake.
 
@@ -258,4 +257,4 @@ Record: shift seed, time to first movement, time to first stop, compactor attemp
 3. Add a short cleanup animation/state and finite spill-kit resource.
 4. Extract pure rules into modules and write tests for cargo invariants, stop transitions, timeout, and score idempotence.
 5. Tune route time, stop radius, vehicle steering, traffic speed, weights, and score from five observed playtests.
-6. Decide M0 pass/revise based on exit gate; only then start the Unity tactile sandbox.
+6. Decide M0 pass/revise based on exit gate; only then start the browser tactile sandbox.

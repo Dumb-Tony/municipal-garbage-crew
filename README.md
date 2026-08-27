@@ -14,12 +14,13 @@ Drive with **WASD** or **arrow keys**. Stop beside a highlighted curb bin and pr
 
 - `prototype/` — playable Canvas prototype
 - `docs/GDD.md` — living game design document and decision log
+- `docs/ART_DIRECTION.md` — canonical visual language, palette, lighting, UI, and asset rules
 - `docs/BUILD_PREP.md` — backlog, milestones, specifications, acceptance criteria, and QA
 - `docs/PLAYTEST.md` — lightweight playtest form
 
 ## Current slice
 
-Version `0.4.1` implements a single-player, one-screen neighborhood route. Bin loading is now a hands-on balance interaction rather than an automatic animation. It also corrects the unsafe traffic-overlapping spawn, tightens driving to the roadway, improves collision geometry, and retains the corrected truck orientation, contextual guidance, uncertain inspection, spill recovery, pause safety, deterministic events, and itemized score report. Versioned static asset URLs prevent GitHub Pages from mixing new markup with an older cached game script.
+Version `0.5.0` establishes the production visual target: an original early-2000s-console urban-noir Bellwether with a cinematic title screen, frozen brick district, wet-road reflections, slush, fire escapes, storefront light, steam, sleet, chunky vehicles, and a diegetic sanitation-authority HUD. The game remains browser-first; Unity is no longer part of the plan.
 
 ## Repository and publishing policy
 

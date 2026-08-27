@@ -1,8 +1,8 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.4.1
+**Status:** Active preproduction / browser slice 0.5.0
 **Last updated:** 2026-08-25  
-**Product direction:** 2–5 player cooperative 3D Unity/Steam game  
+**Product direction:** browser-first stylized game; solo now, cooperative expansion evaluated after the core route is proven
 **Current proof:** standalone 2D Canvas prototype, solo, no build step
 
 ### Repository and deployment policy
@@ -176,11 +176,15 @@ Bellwether can support other work-focused games through recurring places and dep
 
 ## 11. Art direction
 
-Stylized, chunky 3D with grounded proportions and slightly exaggerated interaction affordances. Surfaces are weathered but colors remain cleanly grouped: DPW green, safety amber, warm residential neutrals, dark asphalt, contamination red. Silhouettes distinguish waste classes at a glance. Hands, handles, hopper danger zones, traffic approach, and interactable controls receive restrained highlights.
+The visual target is an original early-2000s-console urban noir, using the working-class winter streets and oppressive nighttime mood associated with period crime games without copying their characters, assets, maps, branding, or exact compositions. Bellwether is dense, frozen, damp, and municipal: soot-dark brick walk-ups, metal fire escapes, narrow storefronts, alley steam, dirty snowbanks, salt-stained curbs, black wet asphalt, sodium-orange streetlights, and isolated fluorescent shop light.
 
-Physics animation should feel heavy and imperfect, supported by authored poses and procedural IK. Avoid ragdoll noise as the default joke. Camera: close third-person while handling, wider/context-sensitive near the truck, with aggressive occlusion management and comfort options.
+Forms are chunky and deliberately low-detail, with strong silhouettes and low-resolution texture logic rather than clean modern vector minimalism. Color gradients are compressed; edges are hard; selective dithering, scanlines, grain, and imperfect reflections sell the period. The palette is asphalt navy, soot black, brick rust, dirty-snow gray, sodium amber, muted sanitation green, and sparse fluorescent lime. Warm color is reserved for work lights, route guidance, hazards, and occupied windows.
 
-The browser slice translates this into a municipal field-manual graphic style: flat colors, crisp shapes, compact typography, and no external assets.
+The truck must remain the most readable moving shape: cream cab at the true forward end, deep municipal-green body, amber beacons, red-and-amber rear hazard striping, hard shadow, and a broad headlight cone. Bins are dark green with pale municipal plates; tagged stops add rust red and amber paper. Traffic uses muted, era-appropriate sedan silhouettes. Interactions use restrained amber brackets, labels, and dashed safety rings that feel issued by the Bellwether Sanitation Authority.
+
+The interface resembles aging dispatch hardware and municipal forms: black-green panels, stamped amber rules, condensed display type, monospaced procedural copy, clipped corners, numbered forms, radio language, and visible equipment state. It must feel diegetic without sacrificing instant readability. The title/menu uses original generated Bellwether key art; the playable route remains code-rendered Canvas art so weather, light, objects, and consequences stay responsive.
+
+Atmosphere supports play rather than obscuring it. Sleet, steam, vignette, scanlines, slush, reflection streaks, and darkness sit behind or around critical silhouettes. Gameplay cues always outrank the noir grade. Reduced-motion mode suppresses scanlines and nonessential presentation motion.
 
 ## 12. Audio direction
 
@@ -212,7 +216,7 @@ Scoring has independent service, safety, cleanliness, compliance, and time dimen
 
 Test whether one route creates meaningful tension between safe handling, contamination judgment, capacity, positioning, and time—and whether mistakes remain legible and funny enough to invite a retry.
 
-### Included through 0.4.0
+### Included through 0.5.0
 
 - One-screen Maple Street route with six stops.
 - Top-down drivable rear-loader with momentum, steering, boundaries, and damage collisions.
@@ -225,10 +229,11 @@ Test whether one route creates meaningful tension between safe handling, contami
 - Deterministic shift seed, deterministic spill checks, and a structured event ledger covering route decisions and consequences.
 - Corrected front-facing truck silhouette with cab, windshield, headlights, and explicit forward marker.
 - Safe road-aligned spawn, road-only movement bounds, and lane-sensitive collision envelopes verified against the initial traffic positions.
+- Original urban-noir title art and a complete PS2-era presentation pass across the page, route environment, weather, vehicles, bins, overlays, HUD, messaging, and social-preview metadata.
 
 ### Explicitly deferred
 
-On-foot avatar, direct grab physics, multiple waste objects per bin, multiplayer/networking, procedural layouts, persistence, upgrades, resident actors, touch/gamepad controls, and 3D presentation. These are not required to validate the first decision loop.
+On-foot avatar, direct grab physics, multiple waste objects per bin, multiplayer/networking, procedural layouts, persistence, upgrades, resident actors, and touch/gamepad controls. These are not required to validate the first decision loop.
 
 ## 16. Technical approach
 
@@ -240,7 +245,7 @@ The current implementation is intentionally one script for frictionless delivery
 
 ### Data and state architecture
 
-The authoritative shift state contains phase, route clock, score ledger, truck state/cargo, stops, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Definitions (stop templates, truck tuning, contamination rules) remain separate from runtime instances. The 0.4.0 prototype records major route and handling events and presents an itemized final score; remaining live score mutations should move behind named commands/events (`InspectStop`, `CollectLoad`, `Compact`, `Collision`, `ResolveStop`) so replays, networking, analytics, and tests can observe the same decisions.
+The authoritative shift state contains phase, route clock, score ledger, truck state/cargo, stops, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Definitions (stop templates, truck tuning, contamination rules) remain separate from runtime instances. The 0.5.0 prototype records major route and handling events and presents an itemized final score; remaining live score mutations should move behind named commands/events (`InspectStop`, `CollectLoad`, `Compact`, `Collision`, `ResolveStop`) so replays, networking, analytics, and tests can observe the same decisions.
 
 Long-term persistence layers:
 
@@ -251,24 +256,24 @@ Long-term persistence layers:
 
 Save files should be versioned, migrated, and never store scene object references. Seeded variation plus an event log makes bugs and challenge routes reproducible.
 
-### Unity migration
+### Browser-first production architecture
 
-- Use ScriptableObjects for immutable waste, tool, vehicle, stop, and route definitions; plain serializable C# records for runtime/save state.
-- Keep authoritative rules in a simulation assembly without MonoBehaviour dependencies. Presentation listens to domain events.
-- Start with Unity's Input System, Cinemachine, physics layers, and configurable joints; evaluate Netcode for GameObjects versus an alternative only after a two-player greybox test.
-- Server/host authority owns grabs, hopper contents, truck motion, compactor, score, and stop resolution. Clients predict cosmetic hands and local interaction highlighting; do not predict destructive compactor outcomes.
-- Network objects at container/large-item granularity. Aggregate settled small debris where possible. Use ownership transfer sparingly and explicit interaction locks for shared grabs.
-- Build the truck as coupled systems: locomotion, seats/riders, hopper, cargo volume, controls, damage, audio, and replication. Avoid one monolithic vehicle script.
-- Validate 2-player network physics with latency simulation before expanding route content. Browser code is a rules sketch, not code intended for porting line by line.
+- Plain HTML/CSS/Canvas remains the canonical runtime. No Unity migration is planned.
+- Split the current script into pure simulation, content definitions, input actions, Canvas presentation, DOM UI, audio, persistence, and tests once the visual pass stabilizes.
+- Keep simulation at a fixed step and render independently so handling remains deterministic across refresh rates.
+- Use low-resolution procedural texture tiles, small authored raster assets, and code-drawn dynamic objects; establish an asset budget before adding additional districts.
+- Use Web Audio for layered vehicle and neighborhood sound, IndexedDB or versioned local storage for saves, and a service worker only when offline installation is a proven need.
+- If multiplayer remains desirable after the solo route succeeds, evaluate authoritative WebSocket hosting with event/state snapshots. Do not let networking requirements delay the core tactile route.
+- A future downloadable release may wrap the web build, but the browser version remains the source of truth.
 
 ## 17. Milestones
 
 - **M0 — Route proof (current):** solo browser loop, six stops, decisions, capacity, hazards, scoring.
 - **M1 — Tactile proof:** on-foot loader, grab/tilt/tip one bin, individual bag, spill recovery, better collision rules.
 - **M2 — Cooperation proof:** two-player greybox, driver/loader handoff, safe-move call, shared bin, hopper operator.
-- **M3 — Route proof in Unity:** Maple block in 3D, rear-loader, 8–12 variable stops, traffic, results and replay seed.
+- **M3 — Browser route expansion:** a second authored Bellwether block, 8–12 variable stops, richer traffic, results and replay seed.
 - **M4 — Progression proof:** depot, three shifts, persistent addresses, truck/tool upgrade, complaint recovery.
-- **M5 — Vertical slice:** polished district, 2–5 players, accessibility baseline, Steam session flow, performance and network validation.
+- **M5 — Production vertical slice:** polished district, accessibility baseline, installable browser release, performance validation, and a multiplayer go/no-go decision.
 
 Exit criteria and task ordering are in `BUILD_PREP.md`.
 
@@ -284,7 +289,7 @@ Exit criteria and task ordering are in `BUILD_PREP.md`.
 | Simulation scope explodes | Delays playable quality | Every property must support a decision; cut invisible realism |
 | Solo design distorts co-op | Prototype optimizes wrong fantasy | Treat solo as input testing; begin two-player proof early |
 | Tone mocks workers or residents | Undermines setting | Humor from systems; consult sanitation workers during M1–M3 |
-| Motion/audio discomfort | Truck and alarms can fatigue | Accessibility settings built alongside first 3D camera/audio |
+| Motion/audio discomfort | Truck, weather, scanlines, and alarms can fatigue | Reduced-motion/noise options and layered audio controls |
 
 ## 19. Decisions and open questions
 
@@ -312,10 +317,10 @@ Exit criteria and task ordering are in `BUILD_PREP.md`.
 
 ## 20. Next implementation tasks
 
-1. Run five short playtests of 0.4.0; record completion rate, first intentional service, handling slips, first collision, compactor use, decision errors, spill recovery, and whether players retry.
+1. Run five short playtests of 0.5.0; record completion rate, first intentional service, handling slips, first collision, compactor use, decision errors, spill recovery, visual readability, and whether players retry.
 2. Move remaining score mutations into event reducers; the 0.3 report is auditable, but the reducer remains the replay-safe architecture target.
 3. Add keyboard remapping and gamepad input abstraction.
 4. Add a short animated cleanup state and limited cleanup-kit supply to deepen spill recovery.
 5. Split simulation, input, renderer, audio, content, and UI modules; add rule tests.
-6. Build the M1 Unity handling sandbox: one avatar, one wheeled bin, one hopper, one bag, one curb.
+6. Build the M1 browser handling sandbox: one loader, one wheeled bin, one hopper, one bag, and one curb using the established noir visual language.
 7. Schedule sanitation-worker interviews before locking handling, terminology, safety procedures, or consequence tone.

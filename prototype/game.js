@@ -459,6 +459,8 @@
       drawSpills();
       drawParticles();
       drawTruck();
+      drawWeather();
+      drawNoirPass();
       drawHUD();
       if (game.phase !== "READY" && game.phase !== "RESULT") drawRouteArrow();
     }
@@ -466,18 +468,63 @@
   }
 
   function drawWorld() {
-    ctx.fillStyle = "#849268"; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#b9af8a"; ctx.fillRect(0, 145, W, 55); ctx.fillRect(0, 400, W, 55);
-    ctx.fillStyle = "#323836"; ctx.fillRect(0, 210, W, 180);
-    ctx.fillStyle = "rgba(255,255,255,.19)";
-    for (let x = 0; x < W; x += 72) { ctx.fillRect(x, 297, 38, 4); }
-    ctx.fillStyle = "#6d765c";
-    [[70,50,120,76],[235,55,145,70],[500,42,140,84],[720,60,150,72],[85,480,145,82],[330,482,155,76],[575,476,126,85],[755,478,130,78]].forEach(([x,y,w,h]) => {
-      ctx.fillRect(x,y,w,h); ctx.fillStyle = "#d5c59d"; ctx.fillRect(x+10,y+10,w-20,h-20); ctx.fillStyle = "#6d765c";
-    });
-    ctx.fillStyle = "#61704f";
-    for (let x = 28; x < W; x += 115) { ctx.beginPath(); ctx.arc(x, 128, 20, 0, Math.PI*2); ctx.fill(); }
+    ctx.fillStyle="#090d12"; ctx.fillRect(0,0,W,H);
+
+    drawBrickBlock(0,0,214,145,"#442c28",[42,108,170]);
+    drawBrickBlock(218,0,176,145,"#342b2b",[250,316,362]);
+    drawBrickBlock(401,0,235,145,"#503126",[438,504,578]);
+    drawBrickBlock(643,0,168,145,"#282b2f",[676,742]);
+    drawBrickBlock(818,0,142,145,"#3b2725",[846,908]);
+    drawBrickBlock(0,458,176,142,"#2e2829",[32,92,146],true);
+    drawBrickBlock(182,458,222,142,"#452b27",[214,286,360],true);
+    drawBrickBlock(411,458,190,142,"#292e30",[448,518,568],true);
+    drawBrickBlock(608,458,210,142,"#4b302a",[642,710,780],true);
+    drawBrickBlock(825,458,135,142,"#272a2d",[854,916],true);
+
+    ctx.fillStyle="#43413d"; ctx.fillRect(0,145,W,67); ctx.fillRect(0,390,W,68);
+    ctx.fillStyle="#54504a"; ctx.fillRect(0,145,W,5); ctx.fillRect(0,453,W,5);
+    ctx.fillStyle="#16191d"; ctx.fillRect(0,212,W,178);
+    const roadGradient=ctx.createLinearGradient(0,212,0,390); roadGradient.addColorStop(0,"#14191e"); roadGradient.addColorStop(.5,"#0d1217"); roadGradient.addColorStop(1,"#171b1f"); ctx.fillStyle=roadGradient; ctx.fillRect(0,212,W,178);
+
+    ctx.fillStyle="rgba(112,126,132,.13)";
+    [[80,245,160,11],[286,344,120,8],[510,256,210,9],[746,350,142,7],[610,305,80,5]].forEach(([x,y,w,h])=>ctx.fillRect(x,y,w,h));
+    ctx.fillStyle="rgba(228,150,52,.09)"; ctx.fillRect(40,279,160,5); ctx.fillRect(690,323,180,6);
+    ctx.fillStyle="#6f746f";
+    for(let x=10;x<W;x+=104){ctx.fillRect(x,299,44,3);ctx.fillStyle="#282d30";ctx.fillRect(x+44,299,60,3);ctx.fillStyle="#6f746f";}
+
+    drawSlushBank(0,207,1); drawSlushBank(0,390,-1);
+    drawStreetLamp(112,206,-1); drawStreetLamp(742,396,1);
+    drawHydrant(865,188); drawHydrant(76,414);
+
+    ctx.fillStyle="#07090b"; ctx.fillRect(375,145,30,67); ctx.fillRect(641,390,36,68);
+    ctx.fillStyle="#65615a"; for(let y=153;y<208;y+=13)ctx.fillRect(381,y,18,2); for(let y=399;y<453;y+=13)ctx.fillRect(648,y,22,2);
+    ctx.fillStyle="#809255"; ctx.fillRect(16,112,126,24); ctx.fillStyle="#101510"; ctx.font="bold 11px Courier New"; ctx.fillText("NIGHT OWL DELI",24,128);
+    ctx.fillStyle="#854532"; ctx.fillRect(692,112,96,23); ctx.fillStyle="#e7c68b"; ctx.fillText("BELLWETHER",701,127);
   }
+
+  function drawBrickBlock(x,y,w,h,color,windows,bottom=false){
+    ctx.fillStyle="#08090b";ctx.fillRect(x+5,y+6,w-3,h);
+    ctx.fillStyle=color;ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle="rgba(12,13,15,.35)";ctx.lineWidth=1;
+    for(let row=y+12;row<y+h;row+=10){ctx.beginPath();ctx.moveTo(x,row);ctx.lineTo(x+w,row);ctx.stroke();}
+    for(let col=x+20;col<x+w;col+=40){ctx.beginPath();ctx.moveTo(col,y);ctx.lineTo(col,y+h);ctx.stroke();}
+    const wy=bottom?y+27:y+28;
+    windows.forEach((wx,i)=>{ctx.fillStyle=i%3===1?"#826638":"#11171b";ctx.fillRect(wx,wy,22,31);ctx.fillStyle="rgba(233,155,50,.12)";ctx.fillRect(wx+3,wy+3,7,24);ctx.strokeStyle="#0a0c0e";ctx.strokeRect(wx,wy,22,31);});
+    ctx.fillStyle="#111316";ctx.fillRect(x+8,bottom?y:y+h-10,w-16,10);
+    if(w>180){const fx=x+w*.58,fy=bottom?y+12:y+18;ctx.strokeStyle="#171a1d";ctx.lineWidth=4;ctx.strokeRect(fx,fy,52,52);ctx.lineWidth=2;for(let n=0;n<3;n++){ctx.beginPath();ctx.moveTo(fx-8+n*22,fy+8);ctx.lineTo(fx+16+n*22,fy+52);ctx.stroke();}}
+  }
+
+  function drawSlushBank(x,y,direction){
+    ctx.fillStyle="#777a75";ctx.beginPath();ctx.moveTo(x,y);for(let px=0;px<=W;px+=36){ctx.lineTo(px,y+direction*(5+(px%72===0?5:0)));}ctx.lineTo(W,y+direction*14);ctx.lineTo(x,y+direction*14);ctx.closePath();ctx.fill();
+    ctx.fillStyle="rgba(173,180,177,.36)";for(let px=18;px<W;px+=58){ctx.fillRect(px,y+direction*3,22,2);}
+  }
+
+  function drawStreetLamp(x,y,direction){
+    const glow=ctx.createRadialGradient(x,y-direction*18,2,x,y-direction*18,84);glow.addColorStop(0,"rgba(238,156,49,.27)");glow.addColorStop(1,"rgba(238,156,49,0)");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y-direction*18,84,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#1d2123";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-direction*58);ctx.lineTo(x+direction*18,y-direction*58);ctx.stroke();ctx.fillStyle="#e99b32";ctx.fillRect(x+direction*22-10,y-direction*60-4,20,8);
+  }
+
+  function drawHydrant(x,y){ctx.fillStyle="#6f2e28";ctx.fillRect(x-5,y-8,10,19);ctx.fillRect(x-10,y-4,20,5);ctx.fillStyle="#a86043";ctx.fillRect(x-7,y-12,14,5);ctx.fillStyle="#191b1c";ctx.fillRect(x-9,y+10,18,3);}
 
   function drawStops() {
     for (const stop of game.stops) {
@@ -491,34 +538,41 @@
       }
       ctx.save(); ctx.translate(x, y);
       const near = stop.state === "waiting" && Math.hypot(stop.x-game.truck.x, stop.y-game.truck.y) < 74;
-      if (near) { ctx.strokeStyle = "#f2b84b"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0,0,20+Math.sin(performance.now()/150)*2,0,Math.PI*2); ctx.stroke(); }
-      ctx.fillStyle = stop.state === "tagged" ? "#c86b52" : "#3e6752";
-      ctx.fillRect(-10, -13, 20, 26); ctx.fillStyle = "#18251e"; ctx.fillRect(-13, -16, 26, 5);
-      ctx.fillStyle = "#101613"; ctx.beginPath(); ctx.arc(-8, 15, 3, 0, Math.PI*2); ctx.arc(8,15,3,0,Math.PI*2); ctx.fill();
-      if (stop.state === "tagged") { ctx.fillStyle = "#f4d46a"; ctx.fillRect(10,-9,7,12); }
-      ctx.fillStyle = near ? "#17211c" : "rgba(23,33,28,.76)"; ctx.font = "bold 10px Arial"; ctx.textAlign = "center"; ctx.fillText(stop.label.toUpperCase(), 0, -24); ctx.textAlign = "left";
+      ctx.fillStyle="rgba(0,0,0,.48)";ctx.beginPath();ctx.ellipse(3,17,18,7,0,0,Math.PI*2);ctx.fill();
+      if(near){ctx.strokeStyle="#e99b32";ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(0,0,22+Math.sin(performance.now()/160)*2,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
+      ctx.fillStyle=stop.state==="tagged"?"#713a32":"#283d35";ctx.fillRect(-12,-14,24,29);
+      ctx.fillStyle="#121917";ctx.fillRect(-15,-18,30,6);ctx.fillStyle="#526356";ctx.fillRect(-10,-11,3,20);
+      ctx.fillStyle="#080a0b";ctx.beginPath();ctx.arc(-9,17,4,0,Math.PI*2);ctx.arc(9,17,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#8b8c80";ctx.fillRect(-5,-5,10,8);ctx.fillStyle="#333832";ctx.fillRect(-3,-3,6,4);
+      if(stop.state==="tagged"){ctx.fillStyle="#df9a3b";ctx.fillRect(11,-8,8,13);ctx.fillStyle="#20160d";ctx.fillRect(13,-5,4,1);}
+      if(near){ctx.fillStyle="rgba(8,10,12,.9)";ctx.fillRect(-43,-34,86,14);ctx.strokeStyle="#78562f";ctx.strokeRect(-43,-34,86,14);ctx.fillStyle="#e5ad58";ctx.font="bold 9px Courier New";ctx.textAlign="center";ctx.fillText(stop.label.toUpperCase(),0,-24);ctx.textAlign="left";}
       ctx.restore();
     }
   }
 
   function drawObstacles() {
-    ctx.save(); ctx.translate(455, 205); ctx.rotate(.05); drawCar("#d0c6ac", 1.15); ctx.restore();
-    ctx.fillStyle = "#e6d47f"; ctx.font = "bold 11px Arial"; ctx.fillText("BLOCKED CURB", 414, 164);
+    ctx.save();ctx.translate(455,205);ctx.rotate(.05);drawCar("#746f61",1.15);ctx.restore();
+    ctx.fillStyle="rgba(8,10,12,.88)";ctx.fillRect(407,164,96,14);ctx.fillStyle="#d29035";ctx.font="bold 9px Courier New";ctx.fillText("NO ACCESS // PARKED",414,174);
     for (const car of game.traffic) { ctx.save(); ctx.translate(car.x, car.y); drawCar(car.color, 1); ctx.restore(); }
   }
 
   function drawCar(color, scale) {
-    ctx.scale(scale, scale); ctx.fillStyle = color; ctx.fillRect(-25,-12,50,24); ctx.fillStyle="#202927"; ctx.fillRect(-12,-10,23,20); ctx.fillStyle="#111"; ctx.fillRect(-18,-15,10,4); ctx.fillRect(10,-15,10,4); ctx.fillRect(-18,11,10,4); ctx.fillRect(10,11,10,4);
+    ctx.scale(scale,scale);ctx.fillStyle="rgba(0,0,0,.52)";ctx.fillRect(-27,-10,56,26);ctx.fillStyle="#090b0d";ctx.fillRect(-20,-16,11,5);ctx.fillRect(10,-16,11,5);ctx.fillRect(-20,11,11,5);ctx.fillRect(10,11,11,5);
+    ctx.fillStyle=color;ctx.fillRect(-27,-12,54,24);ctx.fillStyle="#181e22";ctx.fillRect(-11,-10,25,20);ctx.fillStyle="#596267";ctx.fillRect(-8,-8,8,16);ctx.fillStyle="rgba(255,255,255,.12)";ctx.fillRect(-24,-9,5,18);ctx.fillStyle="#a94934";ctx.fillRect(-27,-8,3,6);ctx.fillRect(-27,3,3,6);ctx.fillStyle="#d6bb75";ctx.fillRect(24,-8,3,6);ctx.fillRect(24,3,3,6);
   }
 
   function drawTruck() {
-    const t = game.truck; ctx.save(); ctx.translate(t.x,t.y); ctx.rotate(t.angle);
-    ctx.fillStyle="#111"; ctx.fillRect(-32,-26,15,7); ctx.fillRect(15,-26,15,7); ctx.fillRect(-32,19,15,7); ctx.fillRect(15,19,15,7);
-    ctx.fillStyle="#86aa73"; ctx.fillRect(-40,-23,50,46); ctx.fillStyle="#d9e0d4"; ctx.fillRect(10,-21,32,42);
-    ctx.fillStyle="#27332d"; ctx.fillRect(22,-16,15,32); ctx.fillStyle="#a8c6ca"; ctx.fillRect(31,-14,7,28);
-    ctx.fillStyle="#f2b84b"; ctx.fillRect(-40,-20,6,40); ctx.fillStyle="#fff1b0"; ctx.fillRect(39,-16,4,8); ctx.fillRect(39,8,4,8);
-    ctx.strokeStyle="#17211c"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-25,-17); ctx.lineTo(-25,17); ctx.moveTo(-10,-17); ctx.lineTo(-10,17); ctx.stroke();
-    ctx.fillStyle="#f2b84b"; ctx.beginPath(); ctx.moveTo(50,0); ctx.lineTo(44,-6); ctx.lineTo(44,6); ctx.closePath(); ctx.fill();
+    const t=game.truck;ctx.save();ctx.translate(t.x,t.y);ctx.rotate(t.angle);
+    ctx.fillStyle="rgba(0,0,0,.58)";ctx.fillRect(-43,-22,91,50);
+    ctx.fillStyle="#07090a";ctx.fillRect(-32,-28,16,7);ctx.fillRect(15,-27,16,7);ctx.fillRect(-32,20,16,7);ctx.fillRect(15,20,16,7);
+    const body=ctx.createLinearGradient(-40,-22,12,22);body.addColorStop(0,"#1d332b");body.addColorStop(.5,"#344b3b");body.addColorStop(1,"#17251f");ctx.fillStyle=body;ctx.fillRect(-42,-23,54,46);
+    ctx.fillStyle="#101a16";ctx.fillRect(-38,-18,7,36);ctx.fillStyle="#697462";ctx.fillRect(-28,-18,2,36);ctx.fillRect(-13,-18,2,36);ctx.fillRect(2,-18,2,36);
+    ctx.fillStyle="#bdbaa7";ctx.fillRect(12,-21,32,42);ctx.fillStyle="#8b897c";ctx.fillRect(15,-18,8,36);ctx.fillStyle="#172027";ctx.fillRect(25,-16,15,32);ctx.fillStyle="#69757a";ctx.fillRect(33,-13,6,26);
+    ctx.fillStyle="#121514";ctx.fillRect(11,-2,33,4);ctx.fillStyle="#9a4a2f";ctx.fillRect(-42,-20,6,40);
+    for(let sy=-17;sy<18;sy+=8){ctx.fillStyle=sy%16===-1?"#18130c":"#d29431";ctx.fillRect(-41,sy,5,5);}
+    const beacon=Math.sin(performance.now()/110)>.2?"#ffb13e":"#70451f";ctx.fillStyle=beacon;ctx.fillRect(17,-25,6,4);ctx.fillRect(30,-25,6,4);
+    ctx.fillStyle="#ffe19a";ctx.fillRect(41,-15,4,7);ctx.fillRect(41,8,4,7);ctx.fillStyle="#e99b32";ctx.beginPath();ctx.moveTo(51,0);ctx.lineTo(44,-6);ctx.lineTo(44,6);ctx.closePath();ctx.fill();
+    ctx.fillStyle="rgba(226,156,59,.11)";ctx.beginPath();ctx.moveTo(45,-18);ctx.lineTo(112,-38);ctx.lineTo(112,38);ctx.lineTo(45,18);ctx.closePath();ctx.fill();
     ctx.restore();
   }
 
@@ -528,12 +582,28 @@
     for (const spill of game.spillZones) {
       if (spill.cleaned) continue;
       ctx.save(); ctx.translate(spill.x, spill.y);
-      ctx.fillStyle="rgba(49,38,29,.78)";
+      ctx.fillStyle="rgba(28,24,20,.9)";
       [[-18,-8,8],[0,3,10],[15,-6,6],[-5,-15,5],[20,10,4]].forEach(([x,y,r]) => { ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); });
       const near = Math.hypot(spill.x-game.truck.x, spill.y-game.truck.y) < 68;
-      ctx.strokeStyle=near?"#f2b84b":"#d8684f"; ctx.lineWidth=3; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.arc(0,0,31,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle="#17211c"; ctx.font="bold 10px Arial"; ctx.textAlign="center"; ctx.fillText(near?"X · CLEAN":"SPILL",0,-39); ctx.textAlign="left"; ctx.restore();
+      ctx.strokeStyle=near?"#e99b32":"#8e3e31";ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(0,0,31,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle="rgba(8,10,12,.9)";ctx.fillRect(-35,-47,70,14);ctx.fillStyle=near?"#e9ad53":"#a85b4b";ctx.font="bold 9px Courier New";ctx.textAlign="center";ctx.fillText(near?"X // CLEAN":"ROAD HAZARD",0,-37);ctx.textAlign="left";ctx.restore();
     }
+  }
+
+  function drawWeather(){
+    const time=performance.now()*.045;
+    ctx.strokeStyle="rgba(190,202,203,.22)";ctx.lineWidth=1;
+    for(let i=0;i<52;i++){const x=(i*83+time*1.7)%1040-40;const y=(i*47+time*(.8+i%3*.18))%660-30;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-5,y+12);ctx.stroke();}
+    ctx.fillStyle="rgba(214,219,211,.28)";
+    for(let i=0;i<18;i++){const x=(i*139+time*.23)%1000-20;const y=(i*71+time*.31)%630-15;ctx.fillRect(x,y,2,2);}
+    const steam=Math.sin(performance.now()/520)*4;
+    ctx.strokeStyle="rgba(174,181,177,.13)";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(390,205);ctx.bezierCurveTo(384+steam,188,402-steam,177,394+steam,159);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(658,416);ctx.bezierCurveTo(670-steam,399,649+steam,386,661-steam,369);ctx.stroke();
+  }
+
+  function drawNoirPass(){
+    const vignette=ctx.createRadialGradient(W/2,H/2,170,W/2,H/2,610);vignette.addColorStop(0,"rgba(0,0,0,0)");vignette.addColorStop(.72,"rgba(0,0,0,.12)");vignette.addColorStop(1,"rgba(0,0,0,.62)");ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle="rgba(7,11,14,.045)";for(let y=0;y<H;y+=4)ctx.fillRect(0,y,W,1);
   }
 
   function contextualPrompt() {
@@ -549,26 +619,25 @@
   }
 
   function drawHUD() {
-    ctx.fillStyle="rgba(15,22,18,.91)"; ctx.fillRect(18,16,924,74);
-    ctx.fillStyle="#f0ead8"; ctx.font="800 13px Arial"; ctx.fillText("SHIFT CLOCK",34,39); ctx.fillText("ROUTE",185,39); ctx.fillText("HOPPER",316,39); ctx.fillText("SCORE",715,39); ctx.fillText("COMPLAINTS",820,39);
-    ctx.font="900 25px Arial"; ctx.fillStyle=game.time<30?"#e07055":"#f2b84b"; ctx.fillText(`${Math.ceil(game.time)}s`,34,70);
-    ctx.fillStyle="#f0ead8"; ctx.fillText(`${6-unresolved()}/6`,185,70); ctx.fillText(`${game.score}`,715,70); ctx.fillText(`${game.complaints}`,820,70);
-    ctx.fillStyle="#3c4941"; ctx.fillRect(316,52,340,18); ctx.fillStyle=usedCapacity()>6.8?"#d8684f":"#87ad70"; ctx.fillRect(316,52,340*Math.min(1,usedCapacity()/8),18);
-    ctx.fillStyle="#f0ead8"; ctx.font="bold 11px Arial"; ctx.fillText(`${usedCapacity().toFixed(1)} / 8  ·  loose ${game.loose.toFixed(1)}`,326,65);
-    if (game.compactorCooldown>0) { ctx.fillStyle="#f2b84b"; ctx.fillText(`COMPACTOR ${game.compactorCooldown.toFixed(1)}s`,530,65); }
+    ctx.fillStyle="rgba(7,10,13,.91)";ctx.fillRect(18,16,924,72);ctx.strokeStyle="#4d4a42";ctx.lineWidth=1;ctx.strokeRect(18,16,924,72);ctx.fillStyle="#9a6128";ctx.fillRect(18,16,4,72);
+    ctx.fillStyle="#6d726e";ctx.font="bold 9px Courier New";ctx.fillText("BSA // ROUTE 04",32,33);ctx.fillText("STOPS",179,33);ctx.fillText("HOPPER PRESSURE",300,33);ctx.fillText("SERVICE SCORE",716,33);ctx.fillText("CALLS",858,33);
+    ctx.font="bold 26px Arial Narrow, Arial";ctx.fillStyle=game.time<30?"#c5523d":"#e9a040";ctx.fillText(`${Math.ceil(game.time)}`,32,66);ctx.font="bold 9px Courier New";ctx.fillStyle="#777b77";ctx.fillText("SECONDS",82,66);
+    ctx.font="bold 23px Arial Narrow, Arial";ctx.fillStyle="#ddd8ca";ctx.fillText(`${6-unresolved()}/6`,179,66);ctx.fillText(`${game.score}`,716,66);ctx.fillText(`${game.complaints}`,858,66);
+    ctx.fillStyle="#24292b";ctx.fillRect(300,49,360,20);ctx.strokeStyle="#535751";ctx.strokeRect(300,49,360,20);ctx.fillStyle=usedCapacity()>6.8?"#a54131":"#7d8b4d";ctx.fillRect(303,52,354*Math.min(1,usedCapacity()/8),14);
+    for(let x=306;x<654;x+=22){ctx.fillStyle="rgba(8,10,12,.22)";ctx.fillRect(x,52,2,14);}
+    ctx.fillStyle="#d8d3c5";ctx.font="bold 9px Courier New";ctx.fillText(`${usedCapacity().toFixed(1)} / 8.0 CU  //  LOOSE ${game.loose.toFixed(1)}`,312,64);
+    if(game.compactorCooldown>0){ctx.fillStyle="#e99b32";ctx.fillText(`CYCLE ${game.compactorCooldown.toFixed(1)}S`,555,82);}
     const prompt = contextualPrompt();
-    if (prompt) { ctx.fillStyle="rgba(15,22,18,.88)"; ctx.fillRect(320,100,320,30); ctx.fillStyle="#f2b84b"; ctx.font="bold 12px Arial"; ctx.textAlign="center"; ctx.fillText(prompt,480,120); ctx.textAlign="left"; }
+    if(prompt){ctx.fillStyle="rgba(7,10,13,.9)";ctx.fillRect(310,100,340,28);ctx.strokeStyle="#5d4a32";ctx.strokeRect(310,100,340,28);ctx.fillStyle="#e2a34c";ctx.font="bold 10px Courier New";ctx.textAlign="center";ctx.fillText(prompt,480,118);ctx.textAlign="left";}
     if (game.phase === "LOAD" && game.loading) drawHandlingMeter();
-    if (game.messageTime>0) { ctx.fillStyle="rgba(15,22,18,.9)"; ctx.fillRect(195,530,570,42); ctx.fillStyle="#f0ead8"; ctx.font="bold 14px Arial"; ctx.textAlign="center"; ctx.fillText(game.message,480,556); ctx.textAlign="left"; }
+    if(game.messageTime>0){ctx.fillStyle="rgba(7,10,13,.94)";ctx.fillRect(175,532,610,38);ctx.fillStyle="#8e5e31";ctx.fillRect(175,532,4,38);ctx.strokeStyle="#403d37";ctx.strokeRect(175,532,610,38);ctx.fillStyle="#d9d4c6";ctx.font="bold 11px Courier New";ctx.textAlign="center";ctx.fillText(`DISPATCH // ${game.message.toUpperCase()}`,480,555);ctx.textAlign="left";}
   }
 
   function drawHandlingMeter() {
     const load = game.loading;
-    ctx.fillStyle="rgba(15,22,18,.94)"; ctx.fillRect(285,468,390,52);
-    ctx.fillStyle="#f0ead8"; ctx.font="bold 10px Arial"; ctx.fillText("BIN BALANCE",300,485); ctx.fillText(`${Math.round(load.progress*100)}% LOADED`,568,485);
-    ctx.fillStyle="#3c4941"; ctx.fillRect(300,493,360,12);
-    ctx.fillStyle=Math.abs(load.balance)>.78?"#d8684f":"#87ad70"; ctx.fillRect(478 + load.balance*150,491,8,16);
-    ctx.fillStyle="#f2b84b"; ctx.fillRect(480,493,3,12);
+    ctx.fillStyle="rgba(7,10,13,.95)";ctx.fillRect(275,468,410,52);ctx.strokeStyle="#514838";ctx.strokeRect(275,468,410,52);
+    ctx.fillStyle="#8e9189";ctx.font="bold 9px Courier New";ctx.fillText("HYDRAULIC LIFT // LOAD BALANCE",290,485);ctx.fillText(`${Math.round(load.progress*100)}%`,642,485);
+    ctx.fillStyle="#282d2e";ctx.fillRect(290,494,380,12);ctx.fillStyle=Math.abs(load.balance)>.78?"#b74534":"#7d8b4d";ctx.fillRect(478+load.balance*160,492,9,16);ctx.fillStyle="#e9a040";ctx.fillRect(480,494,3,12);
   }
 
   function drawRouteArrow() {
@@ -577,8 +646,8 @@
     const target = stop || spill;
     if (!target) return;
     const angle = Math.atan2(target.y-game.truck.y, target.x-game.truck.x);
-    ctx.save(); ctx.translate(900,118); ctx.rotate(angle); ctx.fillStyle="#f2b84b"; ctx.beginPath(); ctx.moveTo(20,0); ctx.lineTo(-12,-10); ctx.lineTo(-5,0); ctx.lineTo(-12,10); ctx.closePath(); ctx.fill(); ctx.restore();
-    ctx.fillStyle="#17211c"; ctx.font="bold 11px Arial"; ctx.textAlign="right"; ctx.fillText(stop ? stop.label.toUpperCase() : "SPILL CLEANUP",864,122); ctx.textAlign="left";
+    ctx.save();ctx.translate(900,113);ctx.rotate(angle);ctx.fillStyle="#e99b32";ctx.beginPath();ctx.moveTo(16,0);ctx.lineTo(-10,-8);ctx.lineTo(-4,0);ctx.lineTo(-10,8);ctx.closePath();ctx.fill();ctx.restore();
+    ctx.fillStyle="#9a682f";ctx.font="bold 9px Courier New";ctx.textAlign="right";ctx.fillText(stop?stop.label.toUpperCase():"SPILL CLEANUP",870,116);ctx.textAlign="left";
   }
 
   function frame(now) {

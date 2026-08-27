@@ -3,27 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#16221b">
-  <meta name="description" content="Run one messy small-town sanitation route in Municipal Garbage Crew.">
+  <meta name="theme-color" content="#080a0d">
+  <meta name="description" content="Work the frozen pre-dawn streets of Bellwether in a gritty municipal sanitation route game.">
+  <meta property="og:title" content="Municipal Garbage Crew">
+  <meta property="og:description" content="One frozen route. Six bad curbs. Keep Bellwether moving.">
+  <meta property="og:image" content="https://dumb-tony.github.io/municipal-garbage-crew/prototype/assets/bellwether-noir-title-v2.png">
+  <meta name="twitter:card" content="summary_large_image">
   <title>Municipal Garbage Crew — First Route</title>
-  <link rel="stylesheet" href="styles.css?v=0.4.1">
+  <link rel="stylesheet" href="styles.css?v=0.5.0">
 </head>
 <body>
   <main class="shell">
     <header class="masthead">
       <div>
-        <p class="eyebrow">Department of Public Works · Route 04</p>
-        <h1>Municipal Garbage Crew</h1>
+        <p class="eyebrow">Bellwether Sanitation Authority · District 04</p>
+        <h1><span>Municipal</span> Garbage Crew</h1>
       </div>
-      <div class="shift-tag">TUESDAY · 7:12 AM</div>
+      <div class="shift-tag"><i></i> 04:47 AM · SNOW WATCH</div>
     </header>
 
     <section class="game-frame" aria-label="Playable garbage collection route">
       <canvas id="game" width="960" height="600" tabindex="0" aria-label="Top-down driving game. Use WASD or arrow keys to drive, Space to inspect a bin, E to collect, R to tag contaminated waste, Q to inspect uncertain waste, X to clean spills, and C to compact."></canvas>
       <div id="startPanel" class="overlay-card">
-        <p class="stamp">FIRST ROUTE</p>
-        <h2>Maple Street is waiting.</h2>
-        <p>Clear six curb stops before the shift clock runs out. Inspect questionable loads, protect the truck, and leave the street cleaner than you found it.</p>
+        <p class="stamp">ROUTE 04 · EAST BELLWETHER</p>
+        <h2>Black ice.<br>Six stops.<br>One working compactor.</h2>
+        <p class="briefing">The complaints started before dawn. Clear Maple before rush hour, watch the hopper, and do not give the mayor another reason to call.</p>
         <div class="control-grid" aria-label="Controls">
           <span><b>WASD / Arrows</b> Drive</span>
           <span><b>Space</b> Inspect stop</span>
@@ -31,10 +35,10 @@
           <span><b>C / X</b> Compact / clean spill</span>
           <span><b>Hold Space + A/D</b> Lift / balance bin</span>
         </div>
-        <button id="startButton" type="button">Clock in</button>
+        <button id="startButton" type="button">Begin route <span>›</span></button>
       </div>
       <div id="decisionPanel" class="decision-card hidden" role="dialog" aria-live="polite" aria-labelledby="decisionTitle">
-        <p class="eyebrow">CURBSIDE CHECK</p>
+        <p class="eyebrow">BSA COLLECTION PROTOCOL // CURBSIDE CHECK</p>
         <h2 id="decisionTitle">Contents</h2>
         <p id="decisionText"></p>
         <div class="decision-actions">
@@ -44,13 +48,13 @@
         </div>
       </div>
       <div id="pausePanel" class="overlay-card compact-card hidden" role="dialog" aria-live="polite">
-        <p class="stamp">TRUCK PARKED</p>
+        <p class="stamp">RADIO HOLD // TRUCK PARKED</p>
         <h2>Shift paused</h2>
         <p>The route clock and traffic are stopped.</p>
         <button id="resumeButton" type="button">Resume shift</button>
       </div>
       <div id="resultPanel" class="overlay-card hidden" role="dialog" aria-live="polite">
-        <p class="stamp">SHIFT REPORT</p>
+        <p class="stamp">BSA FORM 22-B // SHIFT REPORT</p>
         <h2 id="resultTitle">Route complete</h2>
         <p id="resultSummary"></p>
         <div id="resultStats" class="result-stats"></div>
@@ -60,11 +64,11 @@
     </section>
 
     <footer class="footer-note">
-      <span>Prototype 0.4.1</span>
+      <span>BUILD 0.5.0 // VISUAL TARGET</span>
       <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
       <div class="footer-actions"><button id="pauseButton" class="text-button" type="button">Pause</button><button id="muteButton" class="text-button" type="button" aria-pressed="false">Sound: on</button></div>
     </footer>
   </main>
-  <script src="game.js?v=0.4.1" defer></script>
+  <script src="game.js?v=0.5.0" defer></script>
 </body>
 </html>
