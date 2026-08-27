@@ -13,6 +13,7 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Deterministic shift seed + event ledger | Reproducible route decisions and structured event history | S | Current slice |
 | Done | Itemized result ledger | Auditable end-of-shift score | S | Event ledger |
 | Done | Copyable solo playtest report | Comparable seed, timing, route, consequence, and assist evidence | S | Event ledger |
+| Done | Shared pure rules module + native tests | One tested source for final score, progression bounds, history, and stop invariants | M | Event ledger |
 | P0 | Event-driven score reducer | Replay-safe score mutations and rule tests | M | Event ledger |
 | Done | Spill recovery interaction | Mistake becomes new work, not only penalty | M | Event ledger |
 | Done | Ambiguous contamination inspection | Genuine time-versus-certainty decision | M | Event ledger |
@@ -182,11 +183,14 @@ Current zero-build slice remains deliberately compact:
 prototype/
   index.html
   styles.css
+  rules.js
   game.js
+  tests/rules.test.js
 docs/
   GDD.md
   BUILD_PREP.md
   PLAYTEST.md
+package.json
 ```
 
 When the P0 event-ledger task begins, use native browser modules and a tiny local server for development:
@@ -288,13 +292,13 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (generated in 0.11.0)
+### Playtest telemetry (generated in 0.12.0)
 
 The results screen generates a copyable report containing the shift seed, active assists, elapsed time, first movement/cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, spills and cleanup, stumbles, damage, score, complaints, credits, trust, and installed upgrades. The observer still records confusion, voluntary retry, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
 
 ## Explicit next implementation tasks
 
-1. Run at least five fresh external solo sessions on build 0.11.0, collecting the generated report plus observer notes for each.
+1. Run at least five fresh external solo sessions on build 0.12.0, collecting the generated report plus observer notes for each.
 2. Tune clarity, pacing, economy, accessibility, and audio fatigue from that evidence, then repeat any failed M5 exit checks.
 3. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
 4. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo, persistence migrations, and stop-state invariants.

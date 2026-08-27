@@ -1,6 +1,8 @@
 (() => {
   "use strict";
 
+  const Rules = window.MGCRules;
+  if (!Rules) throw new Error("Municipal Garbage Crew rules failed to load.");
   const canvas = document.querySelector("#game");
   const ctx = canvas.getContext("2d");
   const ui = {
@@ -44,7 +46,7 @@
   let muted = false;
   let last = 0;
   let game;
-  const SHIFT_DURATION = 600;
+  const SHIFT_DURATION = Rules.STANDARD_SHIFT_DURATION;
   const SHIFT_SEED = 4040712;
 
   const stopsTemplate = [
@@ -172,6 +174,17 @@
   }
   function recordEvent(type, details = {}) {
     game.events.push({ type, at: Number((game.duration - game.time).toFixed(2)), ...details });
+  }
+  function transitionStop(stop, nextState) {
+    if (Rules.canTransitionStop(stop.state, nextState)) {
+      const previousState = stop.state;
+      stop.state = nextState;
+      recordEvent("stop_state_changed", { stopId: stop.id, from: previousState, to: nextState });
+      return true;
+    }
+    recordEvent("invalid_stop_transition", { stopId: stop.id, from: stop.state, to: nextState });
+    showMessage(`Dispatch blocked an invalid ${stop.state} → ${nextState} stop update.`);
+    return false;
   }
 
   function ensureAudio() {
@@ -343,9 +356,9 @@
   function collectActive() {
     const stop = game.activeStop;
     if (game.phase !== "INSPECT" || !stop) return;
+    if (!transitionStop(stop, "authorized")) return;
     ui.decision.classList.add("hidden");
     stop.authorized = true;
-    stop.state = "authorized";
     for (const waste of game.waste.filter(w => w.stopId === stop.id)) waste.state = "ready";
     game.phase = "DRIVE";
     game.activeStop = null;
@@ -360,8 +373,8 @@
       beep(110, .18, "sawtooth");
       return;
     }
+    if (!transitionStop(stop, "loading")) return;
     game.worker.grabbedStop = null;
-    stop.state = "loading";
     game.phase = "LOAD";
     game.loading = { stop, progress: 0, balance: (random() - .5) * .2, drift: (random() - .5) * .5, driftTimer: .7, drops: 0 };
     game.truck.speed = 0;
@@ -371,7 +384,7 @@
   function finishLoad() {
     const stop = game.loading.stop;
     const hopper = hopperPosition();
-    stop.state = "empty";
+    if (!transitionStop(stop, "empty")) return;
     stop.binX = hopper.x;
     stop.binY = hopper.y;
     game.loose += stop.weight;
@@ -391,8 +404,8 @@
   }
 
   function returnBin(stop) {
+    if (!transitionStop(stop, "awaiting-waste")) return;
     stop.binReturned = true;
-    stop.state = "awaiting-waste";
     stop.binX = stop.x;
     stop.binY = stop.y;
     game.worker.grabbedStop = null;
@@ -410,7 +423,7 @@
       showMessage(`Bin returned. ${remaining.map(w => w.label.toLowerCase()).join(" and ")} still waiting at this address.`);
       return;
     }
-    stop.state = "collected";
+    if (!transitionStop(stop, "collected")) return;
     game.collected += 1;
     const familiarityBonus=Math.min(30,(stop.history?.cleanStreak||0)*5);game.score += 120+familiarityBonus;
     recordEvent("stop_collected", { stopId: stop.id });
@@ -422,7 +435,7 @@
   function tagActive() {
     const stop = game.activeStop;
     if (game.phase !== "INSPECT" || !stop) return;
-    stop.state = "tagged";
+    if (!transitionStop(stop, "tagged")) return;
     for (const waste of game.waste.filter(w => w.stopId === stop.id)) waste.state = "tagged";
     game.tagged += 1;
     recordEvent("stop_tagged", { stopId: stop.id, contaminated: stop.contaminated });
@@ -519,17 +532,9 @@
     const loadedBulk = game.waste.filter(w => w.state === "loaded" && w.type === "bulk").length;
     const familiarityBonus=game.stops.filter(s=>s.state==="collected").reduce((sum,s)=>sum+Math.min(30,(s.history?.cleanStreak||0)*5),0);
     const wrongTagPenalty=game.stops.filter(s=>s.state==="tagged"&&!s.contaminated).reduce((sum,s)=>sum+60+Math.min(30,(s.history?.complaints||0)*10),0);
-    const scoreLines = [
-      ["Collected service", game.collected * 120], ["Correct contamination tags", correctTags * 70],
-      ["Route familiarity", familiarityBonus],
-      ["Compactor operation", compactions * 25], ["Spill recovery", game.cleanedSpills * 40],
-      ["Loose bags loaded", loadedBags * 35], ["Oversized items loaded", loadedBulk * 55],
-      ["Time remaining", Math.floor(Math.min(SHIFT_DURATION,game.time)) * 2], ["Incorrect tags", -wrongTagPenalty],
-      ["Contaminated loads", game.badLoads * -90], ["Missed stops", missed * -80],
-      ["Handling slips", game.handlingDrops * -20], ["Spills created", game.spills * -70],
-      ["Truck damage", game.damage * -45], ["Traffic stumbles", game.workerStumbles * -25]
-    ];
-    game.score = Math.max(0, scoreLines.reduce((sum, line) => sum + line[1], 0));
+    const scored=Rules.scoreShift({collected:game.collected,correctTags,familiarityBonus,compactions,cleanedSpills:game.cleanedSpills,loadedBags,loadedBulk,timeRemaining:game.time,wrongTagPenalty,badLoads:game.badLoads,missed,handlingDrops:game.handlingDrops,spills:game.spills,damage:game.damage,workerStumbles:game.workerStumbles});
+    const scoreLines=scored.lines;
+    game.score=scored.score;
     game.phase = "RESULT";
     recordEvent("shift_finished", { timedOut, score: game.score, complaints: game.complaints });
     persistShift();
@@ -559,13 +564,9 @@
   function persistShift(){
     if(game.persisted)return;game.persisted=true;
     for(const stop of game.stops){
-      const previous=campaign.addressHistory[stop.id]||{scheduled:0,visits:0,complaints:0,cleanStreak:0,lastOutcome:"new"};
-      let outcome="missed",complaint=true,clean=false;
-      if(stop.state==="collected"){outcome=stop.contaminated?"contaminated-load":"collected-clean";complaint=stop.contaminated;clean=!stop.contaminated;}
-      else if(stop.state==="tagged"){outcome=stop.contaminated?"tagged-correct":"tagged-complaint";complaint=!stop.contaminated;clean=stop.contaminated;}
-      campaign.addressHistory[stop.id]={scheduled:(previous.scheduled||0)+1,visits:previous.visits+(stop.state!=="waiting"?1:0),complaints:previous.complaints+(complaint?1:0),cleanStreak:clean?previous.cleanStreak+1:0,lastOutcome:outcome};
+      campaign.addressHistory[stop.id]=Rules.updateAddressHistory(campaign.addressHistory[stop.id],stop);
     }
-    const earned=Math.max(75,Math.min(900,Math.floor(game.score*.28)));game.earnings=earned;campaign.credits+=earned;campaign.shifts+=1;campaign.bestScore=Math.max(campaign.bestScore,game.score);campaign.trust=Math.max(0,Math.min(100,campaign.trust+(game.complaints===0?3:-Math.min(12,game.complaints*2))));campaign.lastShift={score:game.score,earned,complaints:game.complaints,at:new Date().toISOString()};saveCampaign();renderDepot();
+    const earned=Rules.calculateEarnings(game.score);game.earnings=earned;campaign.credits+=earned;campaign.shifts+=1;campaign.bestScore=Math.max(campaign.bestScore,game.score);campaign.trust=Rules.calculateTrust(campaign.trust,game.complaints);campaign.lastShift={score:game.score,earned,complaints:game.complaints,at:new Date().toISOString()};saveCampaign();renderDepot();
   }
 
   function buildPlaytestReport(timedOut){
@@ -573,7 +574,7 @@
     const resolved=game.events.filter(event=>["stop_collected","stop_tagged"].includes(event.type));
     const order=resolved.map(event=>stopsTemplate.find(stop=>stop.id===event.stopId)?.label||event.stopId).join(" → ")||"none";
     const lines=[
-      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.11.0",
+      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.12.0",
       `Shift ${campaign.shifts} · seed ${game.seed} · ${timedOut?"clock expired":unresolved()?"ended early":"route complete"}`,
       `Assists: ${activeAssistNames().join(", ")||"none"}`,
       `Elapsed: ${Math.round(game.duration-game.time)}s / ${game.duration}s · score ${game.score} · complaints ${game.complaints}`,

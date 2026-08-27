@@ -1,0 +1,9 @@
+{
+  "name": "municipal-garbage-crew",
+  "version": "0.12.0",
+  "private": true,
+  "description": "Browser-first sanitation route game prototype",
+  "scripts": {
+    "test": "node --test prototype/tests/*.test.js"
+  }
+}

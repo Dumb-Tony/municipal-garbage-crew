@@ -20,7 +20,9 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.11.0` adds the solo-validation kit. Persistent shift setup now includes a score-neutral relaxed clock, forgiving handling, light traffic, reduced camera shake, and high contrast. Each completed or abandoned shift produces a copyable report with the seed, assists, onboarding times, route order, mistakes, recovery, outcome, and progression state so playtests can be compared instead of judged from memory. The persistent depot, address history, upgrades, and consequences remain intact. The game remains browser-first; Unity is not part of the plan.
+Version `0.12.0` makes the solo loop safer to tune. End-of-shift scoring, earnings, trust, address outcomes, and legal stop-state transitions now share a pure browser/Node rules module covered by dependency-free automated tests. Persistent assists and copyable playtest reports remain available for external sessions. The game remains browser-first; Unity is not part of the plan.
+
+Run `npm test` to verify the scoring ceiling, ledger arithmetic, campaign bounds, address history, and stop-state graph. No install or build step is required.
 
 ## Repository and publishing policy
 
