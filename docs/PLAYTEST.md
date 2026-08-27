@@ -1,9 +1,10 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.15.0
+**Build:** 0.16.0
 **Tester:**  
 **Date / browser:**  
 **Shift setup / assists:**
+**Contract:** Maple Regular / Bulk Amnesty / After-Storm Sweep
 
 Do not explain the controls beyond what the game shows. Ask the player to run the route once, then retry only if they choose to. At results, use **Playtest report → Copy report** and paste it below. Do not turn assists off merely to make the test “count”; record the setup and compare like with like.
 
@@ -25,6 +26,8 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Audio fatigue or unclear/overpowering layer:
 - Did they discover and understand the Truck / Street / Effects mixer?
 - Did depot credits, trust, and the last-shift report make sense?
+- Did the contract card communicate its workload, extra time, and payout before starting?
+- Did the chosen contract feel mechanically distinct without becoming unfair?
 - Could they explain an address-history note on the next shift?
 - Upgrade purchased / expected effect / noticed effect:
 - Did “End shift” feel like a useful recovery choice or an accidental trap?

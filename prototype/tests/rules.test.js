@@ -48,6 +48,8 @@ test("address history distinguishes clean service, correct tags, complaints, and
 test("campaign rewards and trust remain bounded", () => {
   assert.equal(rules.calculateEarnings(0), 75);
   assert.equal(rules.calculateEarnings(1000), 280);
+  assert.equal(rules.calculateEarnings(1000, 1.2), 336);
+  assert.equal(rules.calculateEarnings(1000, 99), 350);
   assert.equal(rules.calculateEarnings(999999), 900);
   assert.equal(rules.calculateTrust(99, 0), 100);
   assert.equal(rules.calculateTrust(5, 20), 0);

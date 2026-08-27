@@ -10,7 +10,7 @@
   <meta property="og:image" content="https://dumb-tony.github.io/municipal-garbage-crew/prototype/assets/bellwether-noir-title-v2.png">
   <meta name="twitter:card" content="summary_large_image">
   <title>Municipal Garbage Crew — First Route</title>
-  <link rel="stylesheet" href="styles.css?v=0.15.0">
+  <link rel="stylesheet" href="styles.css?v=0.16.0">
 </head>
 <body>
   <main class="shell">
@@ -29,6 +29,10 @@
           <p class="eyebrow">BSA DEPOT // CREW FILE</p>
           <div id="depotStats" class="depot-stats"></div>
           <p id="lastShiftNote" class="depot-note">No completed shifts on file.</p>
+          <fieldset class="contract-picker">
+            <legend>Dispatch contract</legend>
+            <div id="contractList" class="contract-list"></div>
+          </fieldset>
           <fieldset class="shift-assists">
             <legend>Shift setup</legend>
             <label><input id="relaxedClock" type="checkbox"> Relaxed clock · +2 min</label>
@@ -52,8 +56,8 @@
           <button id="resetCareerButton" class="depot-reset" type="button">Reset crew file</button>
         </aside>
         <p class="stamp">ROUTE 04 · MAPLE DISTRICT</p>
-        <h2>Three blocks.<br>Ten stops.<br>One working compactor.</h2>
-        <p class="briefing">The complaints started before dawn. Work Maple in any order, watch cross traffic and blocked curbs, manage the hopper, and do not give the mayor another reason to call.</p>
+        <h2 id="routeBriefTitle">Three blocks.<br>Ten stops.<br>One working compactor.</h2>
+        <p id="routeBriefText" class="briefing">The complaints started before dawn. Work Maple in any order, watch cross traffic and blocked curbs, manage the hopper, and do not give the mayor another reason to call.</p>
         <div id="controlSummary" class="control-grid" aria-label="Controls">
           <span><b>WASD / Arrows</b> Drive / walk</span>
           <span><b>F</b> Exit / enter truck</span>
@@ -97,7 +101,7 @@
     </section>
 
     <footer class="footer-note">
-      <span>BUILD 0.15.0 // FIXED SHIFT</span>
+      <span>BUILD 0.16.0 // THREE CONTRACTS</span>
       <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
       <div class="footer-actions">
         <details class="audio-mixer">
@@ -115,9 +119,10 @@
       </div>
     </footer>
   </main>
-  <script src="rules.js?v=0.15.0" defer></script>
-  <script src="input.js?v=0.15.0" defer></script>
-  <script src="timing.js?v=0.15.0" defer></script>
-  <script src="game.js?v=0.15.0" defer></script>
+  <script src="rules.js?v=0.16.0" defer></script>
+  <script src="input.js?v=0.16.0" defer></script>
+  <script src="timing.js?v=0.16.0" defer></script>
+  <script src="contracts.js?v=0.16.0" defer></script>
+  <script src="game.js?v=0.16.0" defer></script>
 </body>
 </html>

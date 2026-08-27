@@ -51,6 +51,15 @@ canvas { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; outline
 .depot-stats span { padding: 7px; background: #131719; color: #777e78; font: .57rem/1.25 "Courier New",monospace; text-transform: uppercase; }
 .depot-stats b { color: #e0a44d; font-size: 1rem; }
 .depot-note { margin: 8px 0 0; color: #999d97; font: .62rem/1.35 "Courier New",monospace; }
+.contract-picker { margin: 10px 0; padding: 8px; border: 1px solid #4a4134; }
+.contract-picker legend { padding: 0 5px; color: #c09255; font: 700 .58rem/1 "Courier New",monospace; text-transform: uppercase; }
+.contract-list { display: grid; gap: 5px; }
+.contract-card { display: grid; grid-template-columns: auto 1fr; gap: 3px 7px; align-items: start; padding: 6px 7px; background: #111618; border-left: 2px solid #4b5447; cursor: pointer; }
+.contract-card:has(input:checked) { background: #1b211d; border-left-color: var(--amber); }
+.contract-card input { grid-row: 1 / span 3; margin-top: 2px; accent-color: var(--amber); }
+.contract-card b { color: #cbc5b5; font: 800 .61rem/1.2 "Courier New",monospace; text-transform: uppercase; }
+.contract-card small { color: #858c85; font: .52rem/1.25 "Courier New",monospace; }
+.contract-card i { color: #b6874d; font: 700 .49rem/1.2 "Courier New",monospace; text-transform: uppercase; }
 .shift-assists { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin: 10px 0; padding: 8px; border: 1px solid #353b37; }
 .shift-assists legend { padding: 0 5px; color: #b38a53; font: 700 .58rem/1 "Courier New",monospace; text-transform: uppercase; }
 .shift-assists label { color: #969d96; font: .54rem/1.25 "Courier New",monospace; text-transform: uppercase; }

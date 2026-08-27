@@ -20,9 +20,9 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.15.0` moves the complete route simulation onto a fixed 60 Hz clock independent of display refresh. Truck and worker handling, traffic, cargo, loading, collisions, audio state, and the shift timer now receive identical time steps at 30, 60, 120, or irregular rendering rates; long stalls are capped to prevent runaway catch-up. Reports record simulation steps and discarded stall time alongside frame performance. Persistent remappable keyboard actions remain intact. The game remains browser-first; Unity is not part of the plan.
+Version `0.16.0` completes the M5 three-contract content target on the same polished district. Maple Regular remains the comparable baseline; Bulk Amnesty adds heavier carts plus a broken sofa and cast-iron radiator; After-Storm Sweep adds three assigned debris fields and slower traffic. Extra workload receives score-neutral time and bounded payout multipliers, contract selection persists, and results/history/reports identify the job. Fixed-step handling and remappable keyboard actions remain intact. The game remains browser-first; Unity is not part of the plan.
 
-Run `npm test` to verify fixed-step timing, input mapping, remap safety, scoring, campaign bounds, address history, and stop-state invariants. No install or build step is required.
+Run `npm test` to verify contract content/modifiers, fixed-step timing, input mapping, scoring, campaign bounds, address history, and stop-state invariants. No install or build step is required.
 
 ## Repository and publishing policy
 

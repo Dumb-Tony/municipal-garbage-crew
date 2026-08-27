@@ -64,8 +64,9 @@
     };
   }
 
-  function calculateEarnings(score) {
-    return Math.max(75, Math.min(900, Math.floor(nonNegative(score) * .28)));
+  function calculateEarnings(score, multiplier = 1) {
+    const safeMultiplier = Math.max(1, Math.min(1.25, finite(multiplier, 1)));
+    return Math.max(75, Math.min(900, Math.floor(nonNegative(score) * .28 * safeMultiplier)));
   }
 
   function calculateTrust(currentTrust, complaints) {

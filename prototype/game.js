@@ -4,9 +4,11 @@
   const Rules = window.MGCRules;
   const Input = window.MGCInput;
   const Timing = window.MGCTiming;
+  const Contracts = window.MGCContracts;
   if (!Rules) throw new Error("Municipal Garbage Crew rules failed to load.");
   if (!Input) throw new Error("Municipal Garbage Crew input map failed to load.");
   if (!Timing) throw new Error("Municipal Garbage Crew timing system failed to load.");
+  if (!Contracts) throw new Error("Municipal Garbage Crew contracts failed to load.");
   const canvas = document.querySelector("#game");
   const ctx = canvas.getContext("2d");
   const ui = {
@@ -32,6 +34,9 @@
     lightTraffic: document.querySelector("#lightTraffic"),
     reducedShake: document.querySelector("#reducedShake"),
     highContrast: document.querySelector("#highContrast"),
+    contractList: document.querySelector("#contractList"),
+    routeBriefTitle: document.querySelector("#routeBriefTitle"),
+    routeBriefText: document.querySelector("#routeBriefText"),
     controlSummary: document.querySelector("#controlSummary"),
     bindingList: document.querySelector("#bindingList"),
     resetBindings: document.querySelector("#resetBindingsButton"),
@@ -101,35 +106,38 @@
     {id:"winterTires",name:"Winter Tires",cost:500,description:"Sharper control and fewer collision spills."}
   ];
 
-  function defaultCampaign(){return{version:SAVE_VERSION,shifts:0,credits:0,trust:50,bestScore:0,addressHistory:{},upgrades:{},lastShift:null,settings:{vehicle:72,street:55,effects:78,relaxedClock:true,handlingAssist:true,lightTraffic:false,reducedShake:false,highContrast:false,bindings:Input.defaultBindings()}};}
+  function defaultCampaign(){return{version:SAVE_VERSION,shifts:0,credits:0,trust:50,bestScore:0,addressHistory:{},upgrades:{},lastShift:null,settings:{vehicle:72,street:55,effects:78,relaxedClock:true,handlingAssist:true,lightTraffic:false,reducedShake:false,highContrast:false,contractId:"regular",bindings:Input.defaultBindings()}};}
   function loadCampaign(){try{const parsed=JSON.parse(localStorage.getItem(SAVE_KEY));if(!parsed||parsed.version!==SAVE_VERSION)return defaultCampaign();const base=defaultCampaign();const loaded={...base,...parsed,addressHistory:{...base.addressHistory,...parsed.addressHistory},upgrades:{...base.upgrades,...parsed.upgrades},settings:{...base.settings,...parsed.settings}};loaded.settings.bindings=Input.normalizeBindings(loaded.settings.bindings);return loaded;}catch(_){return defaultCampaign();}}
   let campaign=loadCampaign();
-  function saveCampaign(){try{campaign.settings={vehicle:Number(ui.vehicleVolume.value),street:Number(ui.streetVolume.value),effects:Number(ui.effectsVolume.value),relaxedClock:ui.relaxedClock.checked,handlingAssist:ui.handlingAssist.checked,lightTraffic:ui.lightTraffic.checked,reducedShake:ui.reducedShake.checked,highContrast:ui.highContrast.checked,bindings:Input.normalizeBindings(campaign.settings.bindings)};localStorage.setItem(SAVE_KEY,JSON.stringify(campaign));}catch(_){/* Persistence is optional on restricted origins. */}}
+  function saveCampaign(){try{campaign.settings={vehicle:Number(ui.vehicleVolume.value),street:Number(ui.streetVolume.value),effects:Number(ui.effectsVolume.value),relaxedClock:ui.relaxedClock.checked,handlingAssist:ui.handlingAssist.checked,lightTraffic:ui.lightTraffic.checked,reducedShake:ui.reducedShake.checked,highContrast:ui.highContrast.checked,contractId:Contracts.getContract(campaign.settings.contractId).id,bindings:Input.normalizeBindings(campaign.settings.bindings)};localStorage.setItem(SAVE_KEY,JSON.stringify(campaign));}catch(_){/* Persistence is optional on restricted origins. */}}
   function applyCampaignSettings(){ui.vehicleVolume.value=campaign.settings.vehicle;ui.streetVolume.value=campaign.settings.street;ui.effectsVolume.value=campaign.settings.effects;ui.relaxedClock.checked=campaign.settings.relaxedClock;ui.handlingAssist.checked=campaign.settings.handlingAssist;ui.lightTraffic.checked=campaign.settings.lightTraffic;ui.reducedShake.checked=campaign.settings.reducedShake;ui.highContrast.checked=campaign.settings.highContrast;document.body.classList.toggle("high-contrast",ui.highContrast.checked);renderBindings();}
   function held(action){return Input.isActionDown(action,keys,campaign.settings.bindings);}
   function escapeHTML(value){return String(value).replace(/[&<>"']/g,character=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[character]);}
   function keyLabel(action){return Input.formatCode(campaign.settings.bindings[action]);}
   function renderControlSummary(){const move=["forward","left","reverse","right"].map(keyLabel).join("/");ui.controlSummary.innerHTML=`<span><b>${escapeHTML(move)} / Arrows</b> Drive / walk</span><span><b>${escapeHTML(keyLabel("cab"))}</b> Exit / enter truck</span><span><b>${escapeHTML(keyLabel("work"))}</b> Inspect / load / return</span><span><b>${escapeHTML(keyLabel("grab"))} / ${escapeHTML(keyLabel("tag"))} / ${escapeHTML(keyLabel("inspect"))}</b> Grab / tag / check</span><span><b>Hold ${escapeHTML(keyLabel("brace"))}</b> Brace oversized waste</span><span><b>${escapeHTML(keyLabel("compact"))} / ${escapeHTML(keyLabel("cleanup"))}</b> Compact / clean spill</span><span><b>Hold ${escapeHTML(keyLabel("work"))} + ${escapeHTML(keyLabel("left"))}/${escapeHTML(keyLabel("right"))}</b> Lift / balance bin</span>`;canvas.setAttribute("aria-label",`Top-down sanitation game. Current primary movement keys are ${move}; arrow keys remain available. ${keyLabel("cab")} enters or exits the truck, ${keyLabel("work")} performs contextual work, ${keyLabel("grab")} grabs or releases objects, ${keyLabel("brace")} braces oversized items, ${keyLabel("tag")} tags contamination, ${keyLabel("inspect")} checks uncertain waste, ${keyLabel("cleanup")} cleans spills, and ${keyLabel("compact")} runs the compactor.`);}
   function renderBindings(){ui.bindingList.innerHTML=Input.ACTION_ORDER.map(action=>`<label class="binding-row"><span>${Input.ACTIONS[action].label}</span><button type="button" data-bind-action="${action}" class="${rebindingAction===action?"listening":""}" aria-label="Rebind ${Input.ACTIONS[action].label}">${rebindingAction===action?"Press key…":escapeHTML(keyLabel(action))}</button></label>`).join("");renderControlSummary();}
+  function renderContracts(){const selected=Contracts.getContract(campaign.settings.contractId);ui.contractList.innerHTML=Contracts.CONTRACT_ORDER.map(id=>{const contract=Contracts.getContract(id);const timing=contract.extraSeconds?`+${contract.extraSeconds}s`:`baseline time`;return`<label class="contract-card"><input type="radio" name="contract" value="${id}" ${id===selected.id?"checked":""}><b>${contract.name}</b><small>${contract.description}</small><i>Pay ×${contract.payoutMultiplier.toFixed(2)} · ${timing}</i></label>`;}).join("");const headline=selected.id==="bulk"?"Three blocks.\nFour loose items.\nOne compactor.":selected.id==="storm"?"Three blocks.\nThree debris fields.\nTen stops.":"Three blocks.\nTen stops.\nOne working compactor.";ui.routeBriefTitle.innerHTML=headline.split("\n").map(escapeHTML).join("<br>");ui.routeBriefText.textContent=`${selected.stamp}. ${selected.description}`;}
   function activeAssistNames(){return Object.entries({"Relaxed clock":game.assists.relaxedClock,"Handling assist":game.assists.handlingAssist,"Light traffic":game.assists.lightTraffic,"Reduced shake":game.assists.reducedShake,"High contrast":game.assists.highContrast}).filter(([,on])=>on).map(([name])=>name);}
   function capacityLimit(){return campaign.upgrades.hopperBaffles?10:8;}
   function renderDepot(){
     const owned=UPGRADES.filter(u=>campaign.upgrades[u.id]).length;const rank=1+Math.floor(campaign.shifts/3)+owned;
     ui.depotStats.innerHTML=`<span>Credits<br><b>$${campaign.credits}</b></span><span>Town trust<br><b>${campaign.trust}</b></span><span>Crew rank<br><b>${rank}</b></span>`;
-    ui.lastShiftNote.textContent=campaign.lastShift?`Last shift: ${campaign.lastShift.score} points · $${campaign.lastShift.earned} earned · ${campaign.lastShift.complaints} complaint${campaign.lastShift.complaints===1?"":"s"}. Best: ${campaign.bestScore}.`:`No completed shifts on file. First route earns the garage budget.`;
+    ui.lastShiftNote.textContent=campaign.lastShift?`Last shift: ${campaign.lastShift.contract||"Maple Regular"} · ${campaign.lastShift.score} points · $${campaign.lastShift.earned} earned · ${campaign.lastShift.complaints} complaint${campaign.lastShift.complaints===1?"":"s"}. Best: ${campaign.bestScore}.`:`No completed shifts on file. First route earns the garage budget.`;
+    renderContracts();
     ui.upgradeList.innerHTML=UPGRADES.map(upgrade=>{const owned=campaign.upgrades[upgrade.id];const disabled=owned||campaign.credits<upgrade.cost;return`<div class="upgrade-card ${owned?"owned":""}"><b>${upgrade.name}</b><small>${upgrade.description}</small><button type="button" data-upgrade="${upgrade.id}" ${disabled?"disabled":""}>${owned?"Installed":`$${upgrade.cost}`}</button></div>`;}).join("");
     const history=stopsTemplate.map(stop=>({stop,entry:campaign.addressHistory[stop.id]})).filter(item=>item.entry).sort((a,b)=>b.entry.visits-a.entry.visits);
     ui.addressHistory.innerHTML=history.length?history.map(({stop,entry})=>`<span><b>${stop.label}</b><i>${entry.lastOutcome.replaceAll("-"," ")} · ${entry.visits}×</i></span>`).join(""):`<span>No address notes yet.</span>`;
-    document.querySelector("#startButton").innerHTML=`Begin shift ${campaign.shifts+1} <span>›</span>`;
+    document.querySelector("#startButton").innerHTML=`Begin ${Contracts.getContract(campaign.settings.contractId).name} <span>›</span>`;
   }
 
   function buyUpgrade(id){const upgrade=UPGRADES.find(item=>item.id===id);if(!upgrade||campaign.upgrades[id]||campaign.credits<upgrade.cost)return;campaign.credits-=upgrade.cost;campaign.upgrades[id]=true;saveCampaign();renderDepot();showMessage(`${upgrade.name} installed for the next shift.`);beep(530,.16,"triangle",.05);}
 
   function resetGame() {
     simulation.reset();
-    const shiftSeed=SHIFT_SEED+campaign.shifts*7919;
+    const contract=Contracts.getContract(campaign.settings.contractId);
+    const shiftSeed=SHIFT_SEED+campaign.shifts*7919+contract.seedOffset;
     const assists={relaxedClock:campaign.settings.relaxedClock,handlingAssist:campaign.settings.handlingAssist,lightTraffic:campaign.settings.lightTraffic,reducedShake:campaign.settings.reducedShake,highContrast:campaign.settings.highContrast};
-    const duration=assists.relaxedClock?SHIFT_DURATION+120:SHIFT_DURATION;
+    const duration=SHIFT_DURATION+(assists.relaxedClock?120:0)+contract.extraSeconds;
     game = {
       phase: "READY",
       seed: shiftSeed,
@@ -140,9 +148,11 @@
       time: duration,
       duration,
       assists,
+      contract,
       score: 0,
       complaints: 0,
       spills: 0,
+      jobSpills: contract.initialSpills.length,
       cleanedSpills: 0,
       handlingDrops: 0,
       damage: 0,
@@ -158,16 +168,16 @@
       activeStop: null,
       loading: null,
       particles: [],
-      spillZones: [],
+      spillZones: Contracts.prepareSpills(contract.id),
       phaseBeforePause: "DRIVE",
       mode: "truck",
       cameraX: 0,
       shake: 0,
       truck: { x: 112, y: 305, angle: 0, speed: 0, stun: 0, collisionCooldown: 0 },
       worker: { x: 64, y: 305, angle: 0, grabbedStop: null, grabbedWaste: null, carryStress: 0, lastMoveAngle: 0, stumble: 0, collisionCooldown: 0 },
-      stops: stopsTemplate.map(s => ({ ...s, history: campaign.addressHistory[s.id]||null, binX: s.x, binY: s.y, binReturned: false, state: "waiting", authorized: false, revealed: false, wobble: randomSeeded(s.id+campaign.shifts*13) * 6 })),
-      waste: wasteTemplate.map(w => ({ ...w, state: "waiting", integrity: 1, angle: w.type === "bulk" ? -.08 : 0 })),
-      traffic: trafficTemplate.filter((_,index)=>!assists.lightTraffic||index%2===0).map(t => ({ ...t })),
+      stops: Contracts.prepareStops(stopsTemplate,contract.id).map(s => ({ ...s, history: campaign.addressHistory[s.id]||null, binX: s.x, binY: s.y, binReturned: false, state: "waiting", authorized: false, revealed: false, wobble: randomSeeded(s.id+campaign.shifts*13+contract.seedOffset) * 6 })),
+      waste: Contracts.prepareWaste(wasteTemplate,contract.id).map(w => ({ ...w, state: "waiting", integrity: 1, angle: w.type === "bulk" ? -.08 : 0 })),
+      traffic: Contracts.prepareTraffic(trafficTemplate,contract.id).filter((_,index)=>!assists.lightTraffic||index%2===0),
       obstacles: obstacleTemplate.map(o => ({ ...o }))
     };
     ui.start.classList.remove("hidden");
@@ -287,9 +297,9 @@
     simulation.reset();
     last = performance.now();
     game.phase = "DRIVE";
-    recordEvent("shift_started", { seed: game.seed });
+    recordEvent("shift_started", { seed: game.seed, contract: game.contract.id });
     ui.start.classList.add("hidden");
-    setStatus(`Follow the amber arrow. Stop near a curb and press ${keyLabel("cab")} to exit the cab.`);
+    setStatus(`${game.contract.name}: follow the amber arrow, stop near a curb, and press ${keyLabel("cab")} to exit.`);
     canvas.focus();
     beep(440, .12, "sawtooth");
   }
@@ -498,7 +508,7 @@
 
   function checkRouteEnd() {
     if (unresolved() === 0 && uncleanedSpills() === 0) finishGame(false);
-    else if (unresolved() === 0) showMessage(`Stops cleared. Clean ${uncleanedSpills()} spill${uncleanedSpills() === 1 ? "" : "s"} with X to close the route.`);
+    else if (unresolved() === 0) showMessage(`Stops cleared. Clean ${uncleanedSpills()} spill${uncleanedSpills() === 1 ? "" : "s"} with ${keyLabel("cleanup")} to close the route.`);
   }
 
   function nearestSpill() {
@@ -529,7 +539,7 @@
       rupturedWaste.x = spill.x + 8;
       rupturedWaste.y = spill.y;
       recordEvent("bag_recovered", { wasteId: rupturedWaste.id, timeCost: 3 });
-      showMessage("Debris gathered into a replacement bag. Pick it up with E. +40 · 3 seconds used");
+      showMessage(`Debris gathered into a replacement bag. Pick it up with ${keyLabel("grab")}. +40 · 3 seconds used`);
     } else {
       recordEvent("spill_cleaned", { timeCost: 3 });
       showMessage("Street cleared with the spill kit. +40 · 3 seconds used");
@@ -564,8 +574,8 @@
     ui.resultStats.innerHTML = [
       ["Score", game.score], ["Collected", `${game.collected}/${TOTAL_STOPS}`],
       ["Correct tags", game.stops.filter(s => s.state === "tagged" && s.contaminated).length],
-      ["Handling slips", game.handlingDrops], ["Waste loaded", `${loadedBags+loadedBulk}/2`], ["Traffic stumbles", game.workerStumbles], ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
-      ["Credits earned", `$${game.earnings}`], ["Town trust", campaign.trust], ["Assists", activeAssistNames().length], ["Shift seed", game.seed], ["Events logged", game.events.length]
+      ["Handling slips", game.handlingDrops], ["Waste loaded", `${loadedBags+loadedBulk}/${game.waste.length}`], ["Traffic stumbles", game.workerStumbles], ["Spills cleaned", `${game.cleanedSpills}/${game.spills+game.jobSpills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
+      ["Contract", game.contract.name], ["Credits earned", `$${game.earnings}`], ["Town trust", campaign.trust], ["Assists", activeAssistNames().length], ["Shift seed", game.seed], ["Events logged", game.events.length]
     ].map(([a, b]) => `<span><b>${a}</b><br>${b}</span>`).join("");
     ui.resultLedger.innerHTML = scoreLines.filter(line => line[1] !== 0).map(([label, value]) =>
       `<div class="${value < 0 ? "negative" : "positive"}"><span>${label}</span><b>${value > 0 ? "+" : ""}${value}</b></div>`
@@ -583,7 +593,7 @@
     for(const stop of game.stops){
       campaign.addressHistory[stop.id]=Rules.updateAddressHistory(campaign.addressHistory[stop.id],stop);
     }
-    const earned=Rules.calculateEarnings(game.score);game.earnings=earned;campaign.credits+=earned;campaign.shifts+=1;campaign.bestScore=Math.max(campaign.bestScore,game.score);campaign.trust=Rules.calculateTrust(campaign.trust,game.complaints);campaign.lastShift={score:game.score,earned,complaints:game.complaints,at:new Date().toISOString()};saveCampaign();renderDepot();
+    const earned=Rules.calculateEarnings(game.score,game.contract.payoutMultiplier);game.earnings=earned;campaign.credits+=earned;campaign.shifts+=1;campaign.bestScore=Math.max(campaign.bestScore,game.score);campaign.trust=Rules.calculateTrust(campaign.trust,game.complaints);campaign.lastShift={contract:game.contract.name,contractId:game.contract.id,score:game.score,earned,complaints:game.complaints,at:new Date().toISOString()};saveCampaign();renderDepot();
   }
 
   function buildPlaytestReport(timedOut){
@@ -593,15 +603,15 @@
     const averageFrame=game.metrics.frameCount?game.metrics.totalFrameMs/game.metrics.frameCount:0;
     const averageFps=averageFrame?Math.round(1000/averageFrame):0;
     const lines=[
-      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.15.0",
-      `Shift ${campaign.shifts} · seed ${game.seed} · ${timedOut?"clock expired":unresolved()?"ended early":"route complete"}`,
+      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.16.0",
+      `Shift ${campaign.shifts} · ${game.contract.name} · pay ×${game.contract.payoutMultiplier.toFixed(2)} · seed ${game.seed} · ${timedOut?"clock expired":unresolved()?"ended early":"route complete"}`,
       `Assists: ${activeAssistNames().join(", ")||"none"}`,
       `Bindings: move ${["forward","left","reverse","right"].map(keyLabel).join("/")} · work ${keyLabel("work")} · grab ${keyLabel("grab")} · cab ${keyLabel("cab")} · tag ${keyLabel("tag")} · check ${keyLabel("inspect")} · compact ${keyLabel("compact")} · clean ${keyLabel("cleanup")} · brace ${keyLabel("brace")}`,
       `Elapsed: ${(game.duration-game.time).toFixed(1)}s / ${game.duration}s · score ${game.score} · complaints ${game.complaints}`,
       `First movement ${first("first_movement")} · cab exit ${first("cab_exited")} · inspection ${first("stop_inspected")} · resolution ${resolved[0]?`${resolved[0].at}s`:"—"}`,
       `Resolved ${TOTAL_STOPS-unresolved()}/${TOTAL_STOPS} · order: ${order}`,
       `Compactions ${game.events.filter(e=>e.type==="compactor_cycled").length} · collisions ${game.events.filter(e=>e.type==="collision").length} · handling slips ${game.handlingDrops}`,
-      `Spills ${game.spills} · cleaned ${game.cleanedSpills} · traffic stumbles ${game.workerStumbles} · truck damage ${game.damage}`,
+      `Spills caused ${game.spills} · assigned ${game.jobSpills} · cleaned ${game.cleanedSpills}/${game.spills+game.jobSpills} · traffic stumbles ${game.workerStumbles} · truck damage ${game.damage}`,
       `Performance ${averageFps||"—"} fps avg · worst ${Math.round(game.metrics.worstFrameMs)}ms · slow frames ${game.metrics.longFrames}/${game.metrics.frameCount} · sim 60Hz/${game.metrics.simulationSteps} steps · dropped ${Math.round(game.metrics.droppedSimulationMs)}ms · view ${innerWidth}×${innerHeight}@${devicePixelRatio}`,
       `Credits +$${game.earnings} · trust ${campaign.trust} · upgrades ${UPGRADES.filter(u=>campaign.upgrades[u.id]).map(u=>u.name).join(", ")||"none"}`
     ];return lines.join("\n");
@@ -691,7 +701,7 @@
       w.carryStress = waste.type === "bulk" ? .18 : 0;
       waste.state = "carried";
       recordEvent("waste_grabbed", { wasteId: waste.id, type: waste.type });
-      showMessage(waste.type === "bulk" ? "Awkward load—hold Shift to brace it while moving." : "Fragile bag—stop moving before you set it down.", 2.8);
+      showMessage(waste.type === "bulk" ? `Awkward load—hold ${keyLabel("brace")} to brace it while moving.` : "Fragile bag—stop moving before you set it down.", 2.8);
       beep(waste.type === "bulk" ? 135 : 190, .08, "square");
       return;
     }
@@ -816,7 +826,7 @@
         game.score -= 20;
         game.time = Math.max(0, game.time - 1);
         recordEvent("bulk_slipped", { wasteId: carriedWaste.id });
-        showMessage("The mattress twisted out of your hands. Brace with Shift and take wider turns.");
+        showMessage(`${carriedWaste.label} twisted out of your hands. Brace with ${keyLabel("brace")} and take wider turns.`);
         beep(105,.16,"sawtooth");
       }
     }
@@ -873,7 +883,7 @@
         waste.y=Math.max(165,Math.min(435,waste.y+Math.sin(t.angle)*48));
         game.damage+=1;game.score-=45;
         recordEvent("bulk_item_struck",{wasteId:waste.id});
-        showMessage("The mattress caught under the truck. It moved, and the bodywork did not enjoy it.");
+        showMessage(`${waste.label} caught under the truck. It moved, and the bodywork did not enjoy it.`);
         beep(70,.28,"sawtooth",.065);
       }
       break;
@@ -1133,10 +1143,14 @@
       ctx.fillStyle="rgba(0,0,0,.5)";ctx.beginPath();ctx.ellipse(3,waste.type==="bulk"?13:9,waste.type==="bulk"?34:15,6,0,0,Math.PI*2);ctx.fill();
       if(waste.type==="bag"){
         ctx.fillStyle=waste.integrity<.7?"#72453a":"#252a2b";ctx.beginPath();ctx.moveTo(-12,10);ctx.lineTo(-9,-8);ctx.lineTo(-4,-14);ctx.lineTo(0,-10);ctx.lineTo(5,-14);ctx.lineTo(10,-7);ctx.lineTo(13,10);ctx.closePath();ctx.fill();ctx.strokeStyle="#60615b";ctx.stroke();ctx.fillStyle="#9b6335";ctx.fillRect(-2,-14,5,4);
+      }else if(waste.label.includes("SOFA")){
+        ctx.fillStyle="#5b5148";ctx.fillRect(-34,-8,68,21);ctx.fillStyle="#76695c";ctx.fillRect(-25,-17,50,16);ctx.fillRect(-38,-12,12,25);ctx.fillRect(26,-12,12,25);ctx.fillStyle="#2d2b29";ctx.fillRect(-28,13,6,5);ctx.fillRect(22,13,6,5);ctx.strokeStyle="#a59a87";ctx.strokeRect(-34,-8,68,21);
+      }else if(waste.label.includes("RADIATOR")){
+        ctx.fillStyle="#4b504f";ctx.fillRect(-31,-12,62,24);ctx.strokeStyle="#969b94";ctx.lineWidth=2;ctx.strokeRect(-31,-12,62,24);for(let x=-25;x<29;x+=9){ctx.beginPath();ctx.moveTo(x,-9);ctx.lineTo(x,9);ctx.stroke();}ctx.fillStyle="#272b2a";ctx.fillRect(-27,12,8,5);ctx.fillRect(19,12,8,5);
       }else{
         ctx.fillStyle="#777269";ctx.fillRect(-34,-13,68,26);ctx.fillStyle="#4a4a47";ctx.fillRect(-30,-9,60,18);ctx.strokeStyle="#aaa392";ctx.lineWidth=2;ctx.strokeRect(-34,-13,68,26);ctx.strokeStyle="#6d685f";for(let x=-24;x<30;x+=12){ctx.beginPath();ctx.moveTo(x,-8);ctx.lineTo(x+7,8);ctx.stroke();}
       }
-      if(near){ctx.rotate(-(waste.angle||0));ctx.fillStyle="rgba(8,10,12,.92)";ctx.fillRect(-48,-38,96,14);ctx.fillStyle="#e5ad58";ctx.font="bold 8px Courier New";ctx.textAlign="center";ctx.fillText(`E // ${waste.label}`,0,-28);ctx.textAlign="left";}
+      if(near){ctx.rotate(-(waste.angle||0));ctx.fillStyle="rgba(8,10,12,.92)";ctx.fillRect(-48,-38,96,14);ctx.fillStyle="#e5ad58";ctx.font="bold 8px Courier New";ctx.textAlign="center";ctx.fillText(`${keyLabel("grab")} // ${waste.label}`,0,-28);ctx.textAlign="left";}
       ctx.restore();
     }
   }
@@ -1196,7 +1210,7 @@
       [[-18,-8,8],[0,3,10],[15,-6,6],[-5,-15,5],[20,10,4]].forEach(([x,y,r]) => { ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill(); });
       const actor=actorPosition();const near = game.mode==="foot"&&Math.hypot(spill.x-actor.x, spill.y-actor.y) < 48;
       ctx.strokeStyle=near?"#e99b32":"#8e3e31";ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.arc(0,0,31,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle="rgba(8,10,12,.9)";ctx.fillRect(-35,-47,70,14);ctx.fillStyle=near?"#e9ad53":"#a85b4b";ctx.font="bold 9px Courier New";ctx.textAlign="center";ctx.fillText(near?"X // CLEAN":"ROAD HAZARD",0,-37);ctx.textAlign="left";ctx.restore();
+      ctx.fillStyle="rgba(8,10,12,.9)";ctx.fillRect(-35,-47,70,14);ctx.fillStyle=near?"#e9ad53":"#a85b4b";ctx.font="bold 9px Courier New";ctx.textAlign="center";ctx.fillText(near?`${keyLabel("cleanup")} // CLEAN`:(spill.job?"ASSIGNED DEBRIS":"ROAD HAZARD"),0,-37);ctx.textAlign="left";ctx.restore();
     }
   }
 
@@ -1365,13 +1379,14 @@
   document.querySelector("#resumeButton").addEventListener("click", () => togglePause());
   document.querySelector("#restartButton").addEventListener("click", resetGame);
   ui.upgradeList.addEventListener("click",event=>{const button=event.target.closest("[data-upgrade]");if(button)buyUpgrade(button.dataset.upgrade);});
+  ui.contractList.addEventListener("change",event=>{const input=event.target.closest('input[name="contract"]');if(!input||game.phase!=="READY")return;campaign.settings.contractId=Contracts.getContract(input.value).id;saveCampaign();resetGame();setStatus(`${Contracts.getContract(input.value).name} selected for this shift.`);});
   ui.bindingList.addEventListener("click",event=>{const button=event.target.closest("[data-bind-action]");if(button)beginRebind(button.dataset.bindAction);});
   ui.resetBindings.addEventListener("click",()=>{rebindingAction=null;campaign.settings.bindings=Input.defaultBindings();saveCampaign();renderBindings();setStatus("Keyboard bindings reset to defaults.");});
   ui.resetCareer.addEventListener("click",()=>{if(!confirm("Reset all local crew history, credits, trust, upgrades, and settings?"))return;campaign=defaultCampaign();try{localStorage.removeItem(SAVE_KEY);}catch(_){}applyCampaignSettings();resetGame();syncAudioMix();});
   function toggleMute() { muted=!muted;if(!muted)ensureAudio();syncAudioMix();ui.mute.textContent=`Sound: ${muted?"off":"on"}`;ui.mute.setAttribute("aria-pressed", String(muted));if(audio)ui.audioStatus.textContent=muted?"Muted // mix preserved":"Active // 3 buses"; }
   ui.mute.addEventListener("click", toggleMute);
   for(const slider of [ui.vehicleVolume,ui.streetVolume,ui.effectsVolume])slider.addEventListener("input",()=>{ensureAudio();syncAudioMix();saveCampaign();});
-  for(const option of [ui.relaxedClock,ui.handlingAssist,ui.lightTraffic,ui.reducedShake,ui.highContrast])option.addEventListener("change",()=>{document.body.classList.toggle("high-contrast",ui.highContrast.checked);saveCampaign();setStatus("Shift setup saved. Changes apply when the next shift begins.");});
+  for(const option of [ui.relaxedClock,ui.handlingAssist,ui.lightTraffic,ui.reducedShake,ui.highContrast])option.addEventListener("change",()=>{document.body.classList.toggle("high-contrast",ui.highContrast.checked);saveCampaign();if(game.phase==="READY")resetGame();setStatus("Shift setup saved and applied.");});
   ui.copyReport.addEventListener("click",async()=>{
     try{
       await navigator.clipboard.writeText(ui.playtestReport.textContent);

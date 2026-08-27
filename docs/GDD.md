@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.15.0
+**Status:** Active preproduction / browser slice 0.16.0
 **Last updated:** 2026-08-27
 **Product direction:** browser-first stylized game; solo now, cooperative expansion evaluated after the core route is proven
 **Current proof:** standalone 2D Canvas prototype, solo, no build step
@@ -216,7 +216,7 @@ Scoring has independent service, safety, cleanliness, compliance, and time dimen
 
 Test whether one route creates meaningful tension between safe handling, contamination judgment, capacity, positioning, and time—and whether mistakes remain legible and funny enough to invite a retry.
 
-### Included through 0.15.0
+### Included through 0.16.0
 
 - Three-screen, camera-tracked Maple District route with ten stops distributed across West Maple, Maple Crossing, and East Maple.
 - Stops may be serviced in any order; the route strip shows district position and every unresolved/resolved stop without forcing a waypoint sequence.
@@ -250,6 +250,7 @@ Test whether one route creates meaningful tension between safe handling, contami
 - Playtest reports capture first movement from either control mode plus average frame rate, worst frame, frames over 34 ms, viewport dimensions, and display pixel ratio, providing comparable performance evidence without external analytics or collecting identity data.
 - A device-independent named-action map now drives every held and discrete keyboard interaction. Depot controls support persistent rebinding and reset, reject conflicts/reserved keys, preserve arrow/right-Shift fallbacks, and update the start card, contextual prompts, accessibility label, status messages, handling meters, and playtest report.
 - A tested accumulator advances the complete authoritative simulation at a fixed 60 Hz independently of render cadence. Frame stalls are capped at 250 ms to prevent a spiral of death, and reports expose simulation-step count plus discarded stall time.
+- Three persistent solo contracts reuse Maple District without becoming palette swaps: Maple Regular is the evaluation baseline; Bulk Amnesty adds two distinct required oversized objects, 8% heavier bins, slower traffic, ninety score-neutral seconds, and a 1.20 payout multiplier; After-Storm Sweep adds three assigned cleanup zones, slower traffic, sixty score-neutral seconds, and a 1.15 payout multiplier. Contract identity appears in briefing, results, last-shift history, and reports.
 - Deterministic shift seed, deterministic spill checks, and a structured event ledger covering route decisions and consequences.
 - Corrected front-facing truck silhouette with cab, windshield, headlights, and explicit forward marker.
 - Safe road-aligned spawn, road-only movement bounds, and lane-sensitive collision envelopes verified against the initial traffic positions.
@@ -269,7 +270,7 @@ The current implementation is intentionally one script for frictionless delivery
 
 ### Data and state architecture
 
-The authoritative shift state contains phase, control mode, worker and truck state, horizontal camera position, route clock and selected assist profile, score ledger, cargo, stop/bin positions and states, loose-waste position/type/integrity/stress state, traffic axes, static access obstacles, deterministic seed/RNG state, a structured event ledger, fixed-step/performance counters, transient effects, and outcome counters. Stops progress through `waiting → authorized → loading → empty → awaiting-waste → collected`, with `tagged` as the alternate terminal state; loose waste progresses independently through `waiting → ready → carried/dropped → loaded`, with a recoverable `ruptured` branch. Audio reads authoritative state but never mutates simulation: continuous node parameters follow phase, mode, speed and proximity, while event cues use category buses. The 0.15.0 prototype routes final score, campaign consequences, history updates, and stop invariants through a shared tested rules module, translates keyboard codes through named actions, advances authoritative state at fixed 60 Hz, and emits comparable runtime-performance evidence; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
+The authoritative shift state contains phase, contract, control mode, worker and truck state, horizontal camera position, route clock and selected assist profile, score ledger, cargo, stop/bin positions and states, loose-waste position/type/integrity/stress state, assigned and caused spills, traffic axes, static access obstacles, deterministic seed/RNG state, a structured event ledger, fixed-step/performance counters, transient effects, and outcome counters. Stops progress through `waiting → authorized → loading → empty → awaiting-waste → collected`, with `tagged` as the alternate terminal state; loose waste progresses independently through `waiting → ready → carried/dropped → loaded`, with a recoverable `ruptured` branch. Audio reads authoritative state but never mutates simulation: continuous node parameters follow phase, mode, speed and proximity, while event cues use category buses. The 0.16.0 prototype routes final score, campaign consequences, history updates, and stop invariants through a shared tested rules module, builds route variants from immutable contract definitions, translates keyboard codes through named actions, advances authoritative state at fixed 60 Hz, and emits comparable runtime-performance evidence; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
 
 Long-term persistence layers:
 
@@ -297,7 +298,7 @@ Save files should be versioned, migrated, and never store scene object reference
 - **M2 — Browser route expansion (implemented foundation):** three scrolling Bellwether blocks, ten stops, route-order choice, drivable intersections, richer traffic, and access obstacles.
 - **M3 — Atmosphere proof (implemented foundation):** responsive vehicle, footstep, traffic, weather, and neighborhood audio with independent category controls.
 - **M4 — Progression proof (implemented foundation):** depot, versioned crew file, persistent address outcomes, trust/credits, three mechanical upgrades, and early-shift recovery.
-- **M5 — Solo validation (current):** the accessibility and evidence-capture kit is implemented; five fresh observed sessions, resulting tuning, performance checks, and voluntary-replay evidence are still required before this milestone passes.
+- **M5 — Solo validation (current):** three job variants, accessibility, deterministic timing, and evidence capture are implemented; five fresh observed sessions, resulting tuning, performance checks, downloadable-web-shell decision, production estimates, and voluntary-replay evidence are still required before this milestone passes.
 - **M6 — Multiplayer gate:** only after M5 passes, build a narrow driver/loader authority test and record a multiplayer go/no-go decision.
 
 Exit criteria and task ordering are in `BUILD_PREP.md`.
