@@ -21,12 +21,13 @@
 
   const W = canvas.width;
   const H = canvas.height;
+  const WORLD_W = W * 3;
   const keys = new Set();
   let audio = null;
   let muted = false;
   let last = 0;
   let game;
-  const SHIFT_DURATION = 360;
+  const SHIFT_DURATION = 600;
   const SHIFT_SEED = 4040712;
 
   const stopsTemplate = [
@@ -34,13 +35,29 @@
     { id: 2, x: 350, y: 190, label: "18 Maple", kind: "Sealed contractor bags", weight: 1.1, contaminated: true, ambiguous: true },
     { id: 3, x: 565, y: 190, label: "24 Maple", kind: "Heavy household", weight: 2.4, contaminated: false },
     { id: 4, x: 774, y: 405, label: "Corner Market", kind: "Bagged commercial", weight: 2.7, contaminated: false },
-    { id: 5, x: 544, y: 405, label: "31 Maple", kind: "Loose electronics", weight: 1.4, contaminated: true },
-    { id: 6, x: 280, y: 405, label: "27 Maple", kind: "Household", weight: 2.2, contaminated: false }
+    { id: 5, x: 1040, y: 190, label: "42 Maple", kind: "Household", weight: 1.4, contaminated: false },
+    { id: 6, x: 1210, y: 405, label: "47 Maple", kind: "Loose electronics", weight: 1.4, contaminated: true },
+    { id: 7, x: 1450, y: 190, label: "50 Maple", kind: "Heavy household", weight: 2.1, contaminated: false },
+    { id: 8, x: 1715, y: 405, label: "Bellwether Arms", kind: "Shared carts", weight: 2.5, contaminated: false },
+    { id: 9, x: 2170, y: 190, label: "72 Maple", kind: "Yard waste", weight: 1.6, contaminated: false },
+    { id: 10, x: 2530, y: 405, label: "East End Laundromat", kind: "Bagged commercial", weight: 2.3, contaminated: false }
   ];
+  const TOTAL_STOPS = stopsTemplate.length;
 
   const trafficTemplate = [
-    { x: 430, y: 270, vx: 72, color: "#a64f3f" },
-    { x: 820, y: 340, vx: -62, color: "#4f7193" }
+    { x: 430, y: 270, vx: 72, axis: "x", color: "#a64f3f" },
+    { x: 820, y: 340, vx: -62, axis: "x", color: "#4f7193" },
+    { x: 1510, y: 270, vx: 66, axis: "x", color: "#78644c" },
+    { x: 2430, y: 340, vx: -74, axis: "x", color: "#536b5c" },
+    { x: 960, y: 150, vy: 76, axis: "y", color: "#805449" },
+    { x: 1920, y: 450, vy: -69, axis: "y", color: "#4e647b" }
+  ];
+
+  const obstacleTemplate = [
+    { x: 455, y: 205, r: 22, type: "parked", label: "BLOCKED CURB" },
+    { x: 1325, y: 395, r: 23, type: "parked", label: "DOUBLE PARKED" },
+    { x: 1605, y: 300, r: 25, type: "barrier", label: "UTILITY CUT" },
+    { x: 2365, y: 205, r: 22, type: "parked", label: "DELIVERY ZONE" }
   ];
 
   const wasteTemplate = [
@@ -76,12 +93,14 @@
       spillZones: [],
       phaseBeforePause: "DRIVE",
       mode: "truck",
+      cameraX: 0,
       shake: 0,
       truck: { x: 112, y: 305, angle: 0, speed: 0, stun: 0, collisionCooldown: 0 },
       worker: { x: 64, y: 305, angle: 0, grabbedStop: null, grabbedWaste: null, carryStress: 0, lastMoveAngle: 0, stumble: 0, collisionCooldown: 0 },
       stops: stopsTemplate.map(s => ({ ...s, binX: s.x, binY: s.y, binReturned: false, state: "waiting", authorized: false, revealed: false, wobble: randomSeeded(s.id) * 6 })),
       waste: wasteTemplate.map(w => ({ ...w, state: "waiting", integrity: 1, angle: w.type === "bulk" ? -.08 : 0 })),
-      traffic: trafficTemplate.map(t => ({ ...t }))
+      traffic: trafficTemplate.map(t => ({ ...t })),
+      obstacles: obstacleTemplate.map(o => ({ ...o }))
     };
     ui.start.classList.remove("hidden");
     ui.decision.classList.add("hidden");
@@ -399,7 +418,7 @@
       ? "Maple Street is clear, the hopper is under control, and dispatch has nothing to complain about."
       : `The route is closed with ${game.complaints} complaint${game.complaints === 1 ? "" : "s"}. The town will remember what happened here.`;
     ui.resultStats.innerHTML = [
-      ["Score", game.score], ["Collected", `${game.collected}/6`],
+      ["Score", game.score], ["Collected", `${game.collected}/${TOTAL_STOPS}`],
       ["Correct tags", game.stops.filter(s => s.state === "tagged" && s.contaminated).length],
       ["Handling slips", game.handlingDrops], ["Waste loaded", `${loadedBags+loadedBulk}/2`], ["Traffic stumbles", game.workerStumbles], ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
       ["Shift seed", game.seed], ["Events logged", game.events.length]
@@ -422,6 +441,7 @@
 
     updateTraffic(dt);
     updateParticles(dt);
+    updateCamera(dt);
     if (game.phase === "LOAD") {
       updateHandling(dt);
       return;
@@ -444,7 +464,7 @@
     if (game.mode === "truck") {
       if (Math.abs(t.speed) > 10) { showMessage("Brake before leaving the cab."); return; }
       const hopper = hopperPosition();
-      w.x = Math.max(24, Math.min(W - 24, hopper.x));
+      w.x = Math.max(24, Math.min(WORLD_W - 24, hopper.x));
       w.y = Math.max(158, Math.min(442, hopper.y + 26));
       w.angle = t.angle;
       game.mode = "foot";
@@ -586,7 +606,7 @@
       }
       w.angle = nextAngle;
       w.lastMoveAngle = nextAngle;
-      w.x = Math.max(22, Math.min(W - 22, w.x + dx / length * speed * dt));
+      w.x = Math.max(22, Math.min(WORLD_W - 22, w.x + dx / length * speed * dt));
       w.y = Math.max(157, Math.min(443, w.y + dy / length * speed * dt));
     } else if (carriedWaste?.type === "bulk") w.carryStress -= dt * .38;
     w.carryStress = Math.max(0, Math.min(1.08, w.carryStress));
@@ -630,7 +650,8 @@
       if (Math.hypot(w.x - car.x, w.y - car.y) < 21) {
         w.collisionCooldown = 1.4;
         w.stumble = .55;
-        w.x = Math.max(24, Math.min(W - 24, w.x - Math.sign(car.vx) * 30));
+        w.x = Math.max(24, Math.min(WORLD_W - 24, w.x - Math.sign(car.vx || 0) * 30));
+        w.y = Math.max(157, Math.min(443, w.y - Math.sign(car.vy || 0) * 30));
         if (w.grabbedStop) {
           recordEvent("bin_dropped_in_traffic", { stopId: w.grabbedStop });
           w.grabbedStop = null;
@@ -669,7 +690,7 @@
         waste.integrity=0;recordEvent("bag_run_over",{wasteId:waste.id});ruptureWaste(waste);
         showMessage("The truck crushed a curbside bag. Get out and clean up the debris.");
       }else{
-        waste.x=Math.max(30,Math.min(W-30,waste.x+Math.cos(t.angle)*48));
+        waste.x=Math.max(30,Math.min(WORLD_W-30,waste.x+Math.cos(t.angle)*48));
         waste.y=Math.max(165,Math.min(435,waste.y+Math.sin(t.angle)*48));
         game.damage+=1;game.score-=45;
         recordEvent("bulk_item_struck",{wasteId:waste.id});
@@ -727,24 +748,34 @@
     if (Math.abs(t.speed) > 3) t.angle += steer * 1.85 * dt * Math.sign(t.speed) * Math.min(1, Math.abs(t.speed) / 40);
     const nx = t.x + Math.cos(t.angle) * t.speed * dt;
     const ny = t.y + Math.sin(t.angle) * t.speed * dt;
-    if (nx > 52 && nx < W - 52 && ny > 225 && ny < 375) { t.x = nx; t.y = ny; }
+    if (isTruckRoad(nx,ny)) { t.x = nx; t.y = ny; }
     else { t.speed *= -.18; game.shake = .16; }
   }
 
+  function isTruckRoad(x,y){if(x<=52||x>=WORLD_W-52||y<=52||y>=H-52)return false;const horizontal=y>225&&y<375;const cross=Math.abs(x-W)<40||Math.abs(x-W*2)<40;return horizontal||cross;}
+
   function updateTraffic(dt) {
     for (const car of game.traffic) {
-      car.x += car.vx * dt;
-      if (car.vx > 0 && car.x > W + 45) car.x = -45;
-      if (car.vx < 0 && car.x < -45) car.x = W + 45;
+      if(car.axis==="y"){
+        car.y += car.vy * dt;
+        if(car.vy>0&&car.y>H+45)car.y=-45;
+        if(car.vy<0&&car.y<-45)car.y=H+45;
+      }else{
+        car.x += car.vx * dt;
+        if (car.vx > 0 && car.x > WORLD_W + 45) car.x = -45;
+        if (car.vx < 0 && car.x < -45) car.x = WORLD_W + 45;
+      }
     }
   }
+
+  function updateCamera(dt){const target=Math.max(0,Math.min(WORLD_W-W,actorPosition().x-W*.5));const follow=1-Math.pow(.00004,dt);game.cameraX+=(target-game.cameraX)*follow;}
 
   function checkCollisions() {
     const t = game.truck;
     if (t.collisionCooldown > 0) return;
     const obstacles = [
       ...game.traffic.map(c => ({ x: c.x, y: c.y, r: 10, moving: true })),
-      { x: 455, y: 205, r: 22, moving: false }
+      ...game.obstacles.map(o=>({x:o.x,y:o.y,r:o.r,moving:false,type:o.type}))
     ];
     for (const o of obstacles) {
       if (Math.hypot(t.x - o.x, t.y - o.y) < o.r + 24) {
@@ -755,7 +786,7 @@
         recordEvent("collision", { movingTraffic: o.moving, looseLoad: Number(game.loose.toFixed(2)) });
         game.score -= 45;
         game.shake = .45;
-        showMessage(o.moving ? "Traffic collision! Truck damage recorded." : "Blocked curb clipped. Back out carefully.");
+        showMessage(o.moving ? "Traffic collision! Truck damage recorded." : o.type==="barrier" ? "Roadwork barrier clipped. Change lanes through the chicane." : "Blocked curb clipped. Back out carefully.");
         beep(72, .3, "sawtooth", .07);
         if (game.loose > 1 && random() < .48) createSpill();
         break;
@@ -787,7 +818,9 @@
     const shakeX = game?.shake ? (Math.random() - .5) * game.shake * 12 : 0;
     const shakeY = game?.shake ? (Math.random() - .5) * game.shake * 12 : 0;
     ctx.translate(shakeX, shakeY);
-      drawWorld();
+    ctx.save();
+    ctx.translate(-(game?.cameraX||0),0);
+    drawWorld();
     if (game) {
       drawStops();
       drawWaste();
@@ -796,15 +829,26 @@
       drawParticles();
       drawTruck();
       drawWorker();
+    }
+    ctx.restore();
+    if(game){
       drawWeather();
       drawNoirPass();
       drawHUD();
+      drawRouteStrip();
       if (game.phase !== "READY" && game.phase !== "RESULT") drawRouteArrow();
     }
     ctx.restore();
   }
 
   function drawWorld() {
+    ctx.fillStyle="#090d12";ctx.fillRect(0,0,WORLD_W,H);
+    for(let block=0;block<3;block++){ctx.save();ctx.translate(block*W,0);drawWorldBlock(block);ctx.restore();}
+    drawCrossStreet(W);drawCrossStreet(W*2);
+    drawStreetSteam();
+  }
+
+  function drawWorldBlock(blockIndex) {
     ctx.fillStyle="#090d12"; ctx.fillRect(0,0,W,H);
 
     drawBrickBlock(0,0,214,145,"#442c28",[42,108,170]);
@@ -835,9 +879,16 @@
 
     ctx.fillStyle="#07090b"; ctx.fillRect(375,145,30,67); ctx.fillRect(641,390,36,68);
     ctx.fillStyle="#65615a"; for(let y=153;y<208;y+=13)ctx.fillRect(381,y,18,2); for(let y=399;y<453;y+=13)ctx.fillRect(648,y,22,2);
-    ctx.fillStyle="#809255"; ctx.fillRect(16,112,126,24); ctx.fillStyle="#101510"; ctx.font="bold 11px Courier New"; ctx.fillText("NIGHT OWL DELI",24,128);
-    ctx.fillStyle="#854532"; ctx.fillRect(692,112,96,23); ctx.fillStyle="#e7c68b"; ctx.fillText("BELLWETHER",701,127);
+    const leftSigns=["NIGHT OWL DELI","MAPLE PAWN & LOAN","EAST END LAUNDRY"];
+    const rightSigns=["BELLWETHER","BELLWETHER ARMS","24 HOUR MARKET"];
+    ctx.fillStyle="#809255"; ctx.fillRect(16,112,150,24); ctx.fillStyle="#101510"; ctx.font="bold 11px Courier New"; ctx.fillText(leftSigns[blockIndex],24,128);
+    ctx.fillStyle="#854532"; ctx.fillRect(692,112,126,23); ctx.fillStyle="#e7c68b"; ctx.fillText(rightSigns[blockIndex],701,127);
+    ctx.fillStyle="rgba(7,10,13,.88)";ctx.fillRect(405,433,150,18);ctx.fillStyle="#a87637";ctx.font="bold 9px Courier New";ctx.textAlign="center";ctx.fillText(["WEST MAPLE","MAPLE CROSSING","EAST MAPLE"][blockIndex],480,445);ctx.textAlign="left";
   }
+
+  function drawCrossStreet(x){ctx.fillStyle="#292d30";ctx.fillRect(x-52,0,104,H);ctx.fillStyle="#54504a";ctx.fillRect(x-52,0,5,H);ctx.fillRect(x+47,0,5,H);ctx.fillStyle="#11161b";ctx.fillRect(x-41,0,82,H);ctx.fillStyle="#74756f";for(let y=18;y<H;y+=74)ctx.fillRect(x-2,y,4,30);ctx.fillStyle="#aaa79b";for(let stripe=-35;stripe<=35;stripe+=14){ctx.fillRect(x+stripe,205,8,19);ctx.fillRect(x+stripe,378,8,19);}ctx.fillStyle="rgba(200,143,56,.12)";ctx.fillRect(x-38,240,76,7);}
+
+  function drawStreetSteam(){const wave=Math.sin(performance.now()/520)*4;ctx.strokeStyle="rgba(174,181,177,.13)";ctx.lineWidth=7;for(let block=0;block<3;block++){for(const point of [[390+block*W,205],[658+block*W,416]]){const x=point[0],y=point[1];ctx.beginPath();ctx.moveTo(x,y);ctx.bezierCurveTo(x-6+wave,y-17,x+8-wave,y-28,x+4+wave,y-46);ctx.stroke();}}}
 
   function drawBrickBlock(x,y,w,h,color,windows,bottom=false){
     ctx.fillStyle="#08090b";ctx.fillRect(x+5,y+6,w-3,h);
@@ -910,10 +961,16 @@
   }
 
   function drawObstacles() {
-    ctx.save();ctx.translate(455,205);ctx.rotate(.05);drawCar("#746f61",1.15);ctx.restore();
-    ctx.fillStyle="rgba(8,10,12,.88)";ctx.fillRect(407,164,96,14);ctx.fillStyle="#d29035";ctx.font="bold 9px Courier New";ctx.fillText("NO ACCESS // PARKED",414,174);
-    for (const car of game.traffic) { ctx.save(); ctx.translate(car.x, car.y); drawCar(car.color, 1); ctx.restore(); }
+    for(const obstacle of game.obstacles){
+      ctx.save();ctx.translate(obstacle.x,obstacle.y);
+      if(obstacle.type==="barrier")drawRoadBarrier();else{ctx.rotate(obstacle.y<300?.05:-.04);drawCar("#746f61",1.15);}
+      ctx.restore();
+      ctx.fillStyle="rgba(8,10,12,.88)";ctx.fillRect(obstacle.x-48,obstacle.y-41,96,14);ctx.fillStyle="#d29035";ctx.font="bold 8px Courier New";ctx.textAlign="center";ctx.fillText(obstacle.label,obstacle.x,obstacle.y-31);ctx.textAlign="left";
+    }
+    for (const car of game.traffic) { ctx.save(); ctx.translate(car.x, car.y);if(car.axis==="y")ctx.rotate(Math.PI/2); drawCar(car.color, 1); ctx.restore(); }
   }
+
+  function drawRoadBarrier(){ctx.fillStyle="rgba(0,0,0,.5)";ctx.fillRect(-30,12,60,8);ctx.fillStyle="#d0c6a7";ctx.fillRect(-30,-8,60,14);ctx.fillStyle="#a34d32";for(let x=-28;x<30;x+=18){ctx.beginPath();ctx.moveTo(x,-8);ctx.lineTo(x+10,-8);ctx.lineTo(x+2,6);ctx.lineTo(x-8,6);ctx.closePath();ctx.fill();}ctx.fillStyle="#232526";ctx.fillRect(-24,6,5,14);ctx.fillRect(19,6,5,14);ctx.fillStyle="#e79a31";ctx.fillRect(-4,-14,8,6);}
 
   function drawCar(color, scale) {
     ctx.scale(scale,scale);ctx.fillStyle="rgba(0,0,0,.52)";ctx.fillRect(-27,-10,56,26);ctx.fillStyle="#090b0d";ctx.fillRect(-20,-16,11,5);ctx.fillRect(10,-16,11,5);ctx.fillRect(-20,11,11,5);ctx.fillRect(10,11,11,5);
@@ -968,9 +1025,6 @@
     for(let i=0;i<52;i++){const x=(i*83+time*1.7)%1040-40;const y=(i*47+time*(.8+i%3*.18))%660-30;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-5,y+12);ctx.stroke();}
     ctx.fillStyle="rgba(214,219,211,.28)";
     for(let i=0;i<18;i++){const x=(i*139+time*.23)%1000-20;const y=(i*71+time*.31)%630-15;ctx.fillRect(x,y,2,2);}
-    const steam=Math.sin(performance.now()/520)*4;
-    ctx.strokeStyle="rgba(174,181,177,.13)";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(390,205);ctx.bezierCurveTo(384+steam,188,402-steam,177,394+steam,159);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(658,416);ctx.bezierCurveTo(670-steam,399,649+steam,386,661-steam,369);ctx.stroke();
   }
 
   function drawNoirPass(){
@@ -1000,7 +1054,7 @@
     ctx.fillStyle="rgba(7,10,13,.91)";ctx.fillRect(18,16,924,72);ctx.strokeStyle="#4d4a42";ctx.lineWidth=1;ctx.strokeRect(18,16,924,72);ctx.fillStyle="#9a6128";ctx.fillRect(18,16,4,72);
     ctx.fillStyle="#6d726e";ctx.font="bold 9px Courier New";ctx.fillText("BSA // ROUTE 04",32,33);ctx.fillText("STOPS",179,33);ctx.fillText("HOPPER PRESSURE",300,33);ctx.fillText("SERVICE SCORE",716,33);ctx.fillText("CALLS",858,33);
     ctx.font="bold 26px Arial Narrow, Arial";ctx.fillStyle=game.time<30?"#c5523d":"#e9a040";ctx.fillText(`${Math.ceil(game.time)}`,32,66);ctx.font="bold 9px Courier New";ctx.fillStyle="#777b77";ctx.fillText("SECONDS",82,66);
-    ctx.font="bold 23px Arial Narrow, Arial";ctx.fillStyle="#ddd8ca";ctx.fillText(`${6-unresolved()}/6`,179,66);ctx.fillText(`${game.score}`,716,66);ctx.fillText(`${game.complaints}`,858,66);
+    ctx.font="bold 23px Arial Narrow, Arial";ctx.fillStyle="#ddd8ca";ctx.fillText(`${TOTAL_STOPS-unresolved()}/${TOTAL_STOPS}`,179,66);ctx.fillText(`${game.score}`,716,66);ctx.fillText(`${game.complaints}`,858,66);
     ctx.fillStyle="#24292b";ctx.fillRect(300,49,360,20);ctx.strokeStyle="#535751";ctx.strokeRect(300,49,360,20);ctx.fillStyle=usedCapacity()>6.8?"#a54131":"#7d8b4d";ctx.fillRect(303,52,354*Math.min(1,usedCapacity()/8),14);
     for(let x=306;x<654;x+=22){ctx.fillStyle="rgba(8,10,12,.22)";ctx.fillRect(x,52,2,14);}
     ctx.fillStyle="#d8d3c5";ctx.font="bold 9px Courier New";ctx.fillText(`${usedCapacity().toFixed(1)} / 8.0 CU  //  LOOSE ${game.loose.toFixed(1)}`,312,64);
@@ -1020,6 +1074,12 @@
   }
 
   function drawCarryMeter(){const stress=game.worker.carryStress;ctx.fillStyle="rgba(7,10,13,.92)";ctx.fillRect(354,136,252,29);ctx.strokeStyle="#514838";ctx.strokeRect(354,136,252,29);ctx.fillStyle="#282d2e";ctx.fillRect(365,148,230,7);ctx.fillStyle=stress>.75?"#b74534":"#7d8b4d";ctx.fillRect(365,148,230*stress,7);ctx.fillStyle="#d9d4c6";ctx.font="bold 8px Courier New";ctx.fillText("GRIP STRESS // SHIFT TO BRACE",365,145);}
+
+  function drawRouteStrip(){
+    const x=24,y=101,w=250,h=28;ctx.fillStyle="rgba(7,10,13,.9)";ctx.fillRect(x,y,w,h);ctx.strokeStyle="#4e493f";ctx.strokeRect(x,y,w,h);ctx.fillStyle="#262b2d";ctx.fillRect(x+12,y+18,w-24,2);
+    for(const stop of game.stops){const sx=x+12+(stop.x/WORLD_W)*(w-24);ctx.fillStyle=stop.state==="collected"?"#73855b":stop.state==="tagged"?"#a26738":"#a9a397";ctx.beginPath();ctx.arc(sx,y+19,3,0,Math.PI*2);ctx.fill();}
+    const actor=x+12+(actorPosition().x/WORLD_W)*(w-24);ctx.fillStyle="#e99b32";ctx.beginPath();ctx.moveTo(actor,y+10);ctx.lineTo(actor-4,y+4);ctx.lineTo(actor+4,y+4);ctx.closePath();ctx.fill();ctx.fillStyle="#8e9189";ctx.font="bold 8px Courier New";ctx.fillText(`DISTRICT MAP // ${Math.min(3,Math.floor(actorPosition().x/W)+1)}/3`,x+10,y+10);
+  }
 
   function drawRouteArrow() {
     const { stop } = nearestStop();

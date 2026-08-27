@@ -20,7 +20,7 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.7.0` adds physical loose waste to the hands-on route. A fragile commercial bag can rupture into a recoverable cleanup task; a soaked mattress moves slowly, sways, builds grip stress, and rewards bracing and wide turns. The truck and traffic can interfere with both objects, and affected addresses resolve only after their bin and extra waste are handled. The game remains browser-first; Unity is not part of the plan.
+Version `0.8.0` expands the hands-on route into three scrolling Maple District blocks with ten freely ordered stops, a camera-following world, an always-visible route strip, two drivable cross streets, cross traffic, several blocked curbs, and a lane-blocking utility chicane. The fragile bag, soaked mattress, physical bin work, contamination, capacity, compaction, and recoverable chaos remain integrated across the longer route. The game remains browser-first; Unity is not part of the plan.
 
 ## Repository and publishing policy
 

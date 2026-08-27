@@ -6,7 +6,7 @@ This document translates the living GDD into an executable plan. Priority means:
 
 | Priority | Item | Outcome | Size | Dependency |
 |---|---|---|---|---|
-| Done | Six-stop Canvas route | Complete inspect/load/tag/finish loop | S | — |
+| Done | Ten-stop scrolling Canvas route | Three blocks, free-order inspect/load/tag/finish loop | L | — |
 | Done | Drivable truck and hazards | Positioning, traffic, damage, blocked curb | M | — |
 | Done | Capacity and compactor | Stop interlock, loose/packed volume, cooldown | S | Route loop |
 | Done | Results and consequences | Score, misses, complaints, spills, damage | S | Route loop |
@@ -25,7 +25,7 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Selective container/waste physics | Bin wheels, grip stress, bag integrity, carry/drop/load states | L | Loader greybox |
 | Done | One bag and rupture/cleanup | Hard drops, traffic/truck rupture, debris, re-bag recovery | M | Container physics |
 | Done | Oversized-item proof | Mattress carry offset, stress, brace, slip, vehicle shove | M | Container physics |
-| P1 | Scrolling district route | Multi-screen navigation, intersections, route order and access obstacles | XL | Tactile proof |
+| Done | Scrolling district route | Multi-screen navigation, intersections, route order and access obstacles | XL | Tactile proof |
 | P1 | Truck safe-move interlock | Driver/loader coordination | M | Loader greybox |
 | P1 | Two-player browser/network test scene | Validate role interplay and authority | XL | Browser handling proof |
 | P1 | Accessibility settings baseline | Shake, contrast, holds, clock, alarms | M | Input/camera/audio |
@@ -72,7 +72,7 @@ Only after M5 passes: two players, driver/loader handoff, safe-move call, shared
 
 - Opens from `prototype/index.html` in a current Chromium, Firefox, or Edge browser without install/build/server.
 - Start, complete, results, and restart loops function without reload.
-- Six stops can each resolve as collected or tagged.
+- Ten stops across three scrolling blocks can each resolve as collected or tagged in any order.
 - Truck can move, reverse, steer, brake, collide, and remain inside play bounds.
 - Collection requires proximity and low speed and shows an identifiable loading motion.
 - Two contaminated stops clearly signal a collect/tag consequence decision.
@@ -270,15 +270,14 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (manual in 0.7.0)
+### Playtest telemetry (manual in 0.8.0)
 
 Record: shift seed, time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, event count, restart choice, and a one-sentence causal account of the worst mistake.
 
 ## Explicit next implementation tasks
 
-1. Expand the route into a scrolling district with intersections, route-order choice, moving traffic, parked access conflicts, and an end-of-route depot return.
-2. Add layered engine, idle, reverse alarm, brake, bin, compactor, weather, and neighborhood audio with category controls.
-3. Add versioned local saves for address outcomes, complaints, route familiarity, depot state, and one meaningful upgrade choice.
-4. Tune the forgiving solo loop through observed playtests, then fix clarity and pacing before adding network code.
-5. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
-6. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo and stop-state invariants.
+1. Add layered engine, idle, reverse alarm, brake, bin, compactor, weather, and neighborhood audio with category controls.
+2. Add versioned local saves for address outcomes, complaints, route familiarity, depot state, and one meaningful upgrade choice.
+3. Tune the forgiving solo loop through observed playtests, then fix clarity and pacing before adding network code.
+4. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
+5. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo and stop-state invariants.

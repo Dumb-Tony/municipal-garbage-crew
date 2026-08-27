@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.7.0
+**Build:** 0.8.0
 **Tester:**  
 **Date / browser:**  
 
@@ -15,6 +15,9 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Bin drops / traffic stumbles:
 - Fragile bag: loaded / ruptured / recovered:
 - Mattress: loaded / slips / used Shift to brace:
+- Route order chosen / backtracking:
+- Cross-street or roadwork collisions:
+- Did the route strip explain all three blocks?
 - First visible confusion:
 - Compactor attempts / successes:
 - Bin handling slips / most difficult lift:

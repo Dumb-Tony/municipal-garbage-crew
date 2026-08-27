@@ -10,7 +10,7 @@
   <meta property="og:image" content="https://dumb-tony.github.io/municipal-garbage-crew/prototype/assets/bellwether-noir-title-v2.png">
   <meta name="twitter:card" content="summary_large_image">
   <title>Municipal Garbage Crew — First Route</title>
-  <link rel="stylesheet" href="styles.css?v=0.7.0">
+  <link rel="stylesheet" href="styles.css?v=0.8.0">
 </head>
 <body>
   <main class="shell">
@@ -25,9 +25,9 @@
     <section class="game-frame" aria-label="Playable garbage collection route">
       <canvas id="game" width="960" height="600" tabindex="0" aria-label="Top-down sanitation game. Use WASD or arrow keys to drive and walk, F to enter or exit the truck, Space for contextual work, E to grab or release bins and loose waste, Shift to brace oversized items, R to tag contamination, Q to inspect uncertain waste, X to clean spills, and C to compact."></canvas>
       <div id="startPanel" class="overlay-card">
-        <p class="stamp">ROUTE 04 · EAST BELLWETHER</p>
-        <h2>Black ice.<br>Six stops.<br>One working compactor.</h2>
-        <p class="briefing">The complaints started before dawn. Clear Maple before rush hour, watch the hopper, and do not give the mayor another reason to call.</p>
+        <p class="stamp">ROUTE 04 · MAPLE DISTRICT</p>
+        <h2>Three blocks.<br>Ten stops.<br>One working compactor.</h2>
+        <p class="briefing">The complaints started before dawn. Work Maple in any order, watch cross traffic and blocked curbs, manage the hopper, and do not give the mayor another reason to call.</p>
         <div class="control-grid" aria-label="Controls">
           <span><b>WASD / Arrows</b> Drive / walk</span>
           <span><b>F</b> Exit / enter truck</span>
@@ -66,11 +66,11 @@
     </section>
 
     <footer class="footer-note">
-      <span>BUILD 0.7.0 // PHYSICAL WASTE</span>
+      <span>BUILD 0.8.0 // MAPLE DISTRICT</span>
       <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
       <div class="footer-actions"><button id="pauseButton" class="text-button" type="button">Pause</button><button id="muteButton" class="text-button" type="button" aria-pressed="false">Sound: on</button></div>
     </footer>
   </main>
-  <script src="game.js?v=0.7.0" defer></script>
+  <script src="game.js?v=0.8.0" defer></script>
 </body>
 </html>
