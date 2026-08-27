@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.6.0
+**Build:** 0.7.0
 **Tester:**  
 **Date / browser:**  
 
@@ -13,6 +13,8 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Did the player exit the cab without help?
 - Did they understand that the empty bin must be returned?
 - Bin drops / traffic stumbles:
+- Fragile bag: loaded / ruptured / recovered:
+- Mattress: loaded / slips / used Shift to brace:
 - First visible confusion:
 - Compactor attempts / successes:
 - Bin handling slips / most difficult lift:

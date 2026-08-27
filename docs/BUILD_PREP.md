@@ -22,8 +22,10 @@ This document translates the living GDD into an executable plan. Priority means:
 | P0 | Remappable input/gamepad layer | Device-independent actions | M | Current input |
 | P0 | Five-person usability playtest | Evidence for M0 decision | S | Current slice |
 | Done | On-foot loader foundation | Exit/enter, walk, grab/release, wheel, load, return | L | Current input |
-| P1 | Container physics model | Mass, wheels, grip, integrity, tip state | L | Loader greybox |
-| P1 | One bag and rupture/cleanup | Core systemic comedy/recovery | M | Container physics |
+| Done | Selective container/waste physics | Bin wheels, grip stress, bag integrity, carry/drop/load states | L | Loader greybox |
+| Done | One bag and rupture/cleanup | Hard drops, traffic/truck rupture, debris, re-bag recovery | M | Container physics |
+| Done | Oversized-item proof | Mattress carry offset, stress, brace, slip, vehicle shove | M | Container physics |
+| P1 | Scrolling district route | Multi-screen navigation, intersections, route order and access obstacles | XL | Tactile proof |
 | P1 | Truck safe-move interlock | Driver/loader coordination | M | Loader greybox |
 | P1 | Two-player browser/network test scene | Validate role interplay and authority | XL | Browser handling proof |
 | P1 | Accessibility settings baseline | Shake, contrast, holds, clock, alarms | M | Input/camera/audio |
@@ -44,21 +46,25 @@ Exit when five fresh players can start without instruction, at least four finish
 
 One browser sandbox/block, one loader, one wheeled cart, one bag, rear hopper, grab/brace/tip, rupture, cleanup, and accessibility toggles. Exit when a novice can move and empty a cart within 60 seconds; weight differences are correctly ranked in 4/5 blind comparisons; failed handling remains attributable; and the same inputs support mouse/keyboard and controller.
 
-### M2 — Cooperation proof (3–5 weeks)
-
-Two players, one drives and both may handle; safe-move call, riding position, shared grab, hopper control, latency simulation. Exit when ten 12-minute sessions show meaningful spoken/nonverbal coordination, no role is idle for more than 20% of the route, and 150 ms simulated latency does not create frequent unrecoverable objects.
-
-### M3 — Browser route expansion (6–8 weeks)
+### M2 — Browser route expansion (3–5 weeks)
 
 One Maple district, 8–12 variable stops, basic traffic, contamination, capacity, results, deterministic seed. Exit at stable target performance on minimum-spec PC, <1 blocking defect per five sessions, and evidence that route knowledge improves the second run.
+
+### M3 — Layered audio proof (1–2 weeks)
+
+Engine load, idle, reversing, brakes, bins, compactor, wind, traffic, distant residents, and street ambience respond to authoritative state. Exit when sound clarifies nearby hazards and machine condition without becoming fatiguing, and vehicle/neighborhood categories can be independently adjusted or muted.
 
 ### M4 — Progression proof (4–6 weeks)
 
 Depot plus three shifts, address history, complaints/trust, one truck and one tool upgrade choice. Exit when consequences persist understandably, weak shifts remain recoverable, and upgrade choices change tactics without deleting core work.
 
-### M5 — Production vertical slice (8–12 weeks after M4)
+### M5 — Solo validation and production vertical slice (8–12 weeks after M4)
 
-One polished district, three job variants, 2–5 players, join/reconnect, complete accessibility baseline, Steam-ready shell, final-quality representative art/audio. Exit requires performance/network matrices, external playtest retention signals, content production estimates, and production/no-go review.
+One polished solo district, three job variants, complete accessibility baseline, downloadable web shell, and final-quality representative art/audio. Exit requires performance matrices, external playtest retention signals, content production estimates, and evidence that failures remain legible and recoverable.
+
+### M6 — Multiplayer go/no-go gate
+
+Only after M5 passes: two players, driver/loader handoff, safe-move call, shared grab, hopper control, and latency simulation. Ten 12-minute sessions must show meaningful coordination, acceptable role activity, and recoverable behavior at 150 ms simulated latency before multiplayer enters the production plan.
 
 ## Browser vertical-slice acceptance criteria
 
@@ -107,7 +113,8 @@ One polished district, three job variants, 2–5 players, join/reconnect, comple
 | Lift and balance bin | Hold Space + A/D or Left/Right | Load phase; holding advances lift, steering keys counter lateral sway; excessive sway causes a recoverable slip |
 | Tag and leave | R or button | Inspection open; correct for contamination, complaint otherwise |
 | Compact | C | Drive phase, speed ≤18, loose load present, cooldown clear |
-| Clean spill | X | On foot within 48 px; costs three seconds and recovers score |
+| Brace oversized waste | Hold Shift | Reduces grip-stress growth and movement speed while carrying bulky items |
+| Clean / re-bag spill | X | On foot within 48 px; costs three seconds and creates a recoverable replacement bag when linked to a rupture |
 | Pause/resume | P or button | Freezes route clock and traffic; focus loss pauses automatically |
 | Restart | Enter or button | Results only |
 | Mute | M or button | Any phase; Web Audio remains optional |
@@ -222,6 +229,11 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Inspect and authorize a valid stop; confirm it remains unresolved until physically serviced.
 - [ ] Grab/release with E; wheel the bin to the hopper; loading begins only within range.
 - [ ] Empty a valid bin; grab it again, return it to its amber marker, and confirm the stop resolves exactly once.
+- [ ] Authorize Corner Market; load its bin and fragile bag in either order; verify the stop resolves only after both plus bin return.
+- [ ] Release the market bag while moving; verify it ruptures, creates debris, and blocks route completion until X re-bags it and the replacement is loaded.
+- [ ] Carry the mattress without Shift through sharp turns; verify grip stress rises and a slip remains recoverable.
+- [ ] Carry the mattress with Shift and wide turns; verify stress falls and loading succeeds.
+- [ ] Drive over the bag and into the mattress; verify rupture/shove consequences are visible and neither creates an impossible state.
 - [ ] Release Space during loading; progress waits. Counter sway in both directions and complete the lift.
 - [ ] Allow the balance marker to escape the safe range; one slip and one penalty are recorded, then handling remains recoverable.
 - [ ] Start a fresh shift and remain stationary for five seconds; no spawn collision or damage occurs.
@@ -258,16 +270,15 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (manual in 0.6.0)
+### Playtest telemetry (manual in 0.7.0)
 
 Record: shift seed, time to first movement, time to first stop, compactor attempts/successes, contamination choices, collision count, spills, completion time, final score, event count, restart choice, and a one-sentence causal account of the worst mistake.
 
 ## Explicit next implementation tasks
 
-1. Add physical loose bags and one oversized object with carry/drop states, weight differences, bag rupture, debris, and cleanup recovery.
-2. Expand the route into a scrolling district with intersections, route-order choice, moving traffic, parked access conflicts, and an end-of-route depot return.
-3. Add layered engine, idle, reverse alarm, brake, bin, compactor, weather, and neighborhood audio with category controls.
-4. Add versioned local saves for address outcomes, complaints, route familiarity, depot state, and one meaningful upgrade choice.
-5. Tune the forgiving solo loop through observed playtests, then fix clarity and pacing before adding network code.
-6. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
-7. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo and stop-state invariants.
+1. Expand the route into a scrolling district with intersections, route-order choice, moving traffic, parked access conflicts, and an end-of-route depot return.
+2. Add layered engine, idle, reverse alarm, brake, bin, compactor, weather, and neighborhood audio with category controls.
+3. Add versioned local saves for address outcomes, complaints, route familiarity, depot state, and one meaningful upgrade choice.
+4. Tune the forgiving solo loop through observed playtests, then fix clarity and pacing before adding network code.
+5. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
+6. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo and stop-state invariants.

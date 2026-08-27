@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.6.0
+**Status:** Active preproduction / browser slice 0.7.0
 **Last updated:** 2026-08-27
 **Product direction:** browser-first stylized game; solo now, cooperative expansion evaluated after the core route is proven
 **Current proof:** standalone 2D Canvas prototype, solo, no build step
@@ -216,7 +216,7 @@ Scoring has independent service, safety, cleanliness, compliance, and time dimen
 
 Test whether one route creates meaningful tension between safe handling, contamination judgment, capacity, positioning, and time—and whether mistakes remain legible and funny enough to invite a retry.
 
-### Included through 0.6.0
+### Included through 0.7.0
 
 - One-screen Maple Street route with six stops.
 - Top-down drivable rear-loader with momentum, steering, boundaries, and damage collisions.
@@ -224,11 +224,16 @@ Test whether one route creates meaningful tension between safe handling, contami
 - Stop inspection requires approaching on foot; a service decision authorizes the physical work instead of instantly collecting the stop.
 - Player-controlled bin loading requires holding the lift and countering deterministic lateral sway; a stop resolves only after the empty bin returns to its address.
 - Forgiving traffic impacts make the worker stumble, drop the bin, and lose a little time without death, reset, or an unrecoverable state.
+- Two authored loose-waste proofs: a fragile commercial bag and an awkward soaked mattress, each tied to an address and required for full service.
+- Unified grab/drop input for bins and loose waste; bag integrity reacts to hard moving drops, traffic, and truck contact.
+- Bag rupture creates visible debris and a linked cleanup zone; cleanup produces a replacement bag so the route remains recoverable.
+- Oversized-item grip stress rises while moving and turning, falls while still or braced with Shift, and causes a recoverable handling slip at its limit.
+- Street waste reacts to the truck: bags can be crushed and oversized objects can be shoved with bodywork damage.
 - Two contaminated loads: one obvious and one uncertain until a five-second closer inspection.
 - Loose and compacted capacity, compactor stop interlock, cooldown, and capacity pressure.
 - Two moving traffic cars and one blocked-curb obstacle.
 - Loose-load spill chance on collision, persistent cleanup zones, time-cost recovery action, damage and score penalties.
-- 300-second shift tuned for the longer hands-on loop, mode-aware next-action guidance, scoring, missed-stop/complaint consequences, itemized results, pause, restart, and minimal generated audio.
+- 360-second shift tuned for physical curb work, mode-aware next-action guidance, scoring, missed-stop/complaint consequences, itemized results, pause, restart, and minimal generated audio.
 - Deterministic shift seed, deterministic spill checks, and a structured event ledger covering route decisions and consequences.
 - Corrected front-facing truck silhouette with cab, windshield, headlights, and explicit forward marker.
 - Safe road-aligned spawn, road-only movement bounds, and lane-sensitive collision envelopes verified against the initial traffic positions.
@@ -236,7 +241,7 @@ Test whether one route creates meaningful tension between safe handling, contami
 
 ### Explicitly deferred
 
-Individual bags, oversized waste, multi-object container contents, scrolling routes, multiplayer/networking, procedural layouts, persistence, upgrades, resident actors, and touch/gamepad controls remain deferred. The next implementation milestone adds physical waste and recoverable rupture/spill behavior to the on-foot foundation.
+Multi-object bin contents, scrolling routes, multiplayer/networking, procedural layouts, persistence, upgrades, resident actors, and touch/gamepad controls remain deferred. The next implementation milestone expands the one-screen proof into a scrolling district with route choice and access obstacles.
 
 ## 16. Technical approach
 
@@ -248,7 +253,7 @@ The current implementation is intentionally one script for frictionless delivery
 
 ### Data and state architecture
 
-The authoritative shift state contains phase, control mode, worker and truck state, route clock, score ledger, cargo, stop/bin positions and states, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Stops now progress through `waiting → authorized → loading → empty → collected`, with `tagged` as the alternate terminal state. Definitions remain separate from runtime instances. The 0.6.0 prototype records major movement handoffs, handling events, route decisions, and consequences; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
+The authoritative shift state contains phase, control mode, worker and truck state, route clock, score ledger, cargo, stop/bin positions and states, loose-waste position/type/integrity/stress state, hazards, deterministic seed/RNG state, a structured event ledger, transient effects, and outcome counters. Stops progress through `waiting → authorized → loading → empty → awaiting-waste → collected`, with `tagged` as the alternate terminal state; loose waste progresses independently through `waiting → ready → carried/dropped → loaded`, with a recoverable `ruptured` branch. Definitions remain separate from runtime instances. The 0.7.0 prototype records movement handoffs, handling events, waste failures, route decisions, and consequences; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
 
 Long-term persistence layers:
 
@@ -272,11 +277,12 @@ Save files should be versioned, migrated, and never store scene object reference
 ## 17. Milestones
 
 - **M0 — Route proof (complete foundation):** solo browser loop, six stops, decisions, capacity, hazards, scoring.
-- **M1 — Tactile proof (current):** on-foot loader and full bin service loop implemented; next add individual bags, oversized waste, rupture/spill recovery, and better collision rules.
-- **M2 — Cooperation proof:** two-player greybox, driver/loader handoff, safe-move call, shared bin, hopper operator.
-- **M3 — Browser route expansion:** a second authored Bellwether block, 8–12 variable stops, richer traffic, results and replay seed.
-- **M4 — Progression proof:** depot, three shifts, persistent addresses, truck/tool upgrade, complaint recovery.
-- **M5 — Production vertical slice:** polished district, accessibility baseline, installable browser release, performance validation, and a multiplayer go/no-go decision.
+- **M1 — Tactile proof (implemented foundation):** on-foot loader, full bin service, physical bag and mattress, rupture/recovery, grip stress, and traffic/truck interference.
+- **M2 — Browser route expansion (current):** a scrolling Bellwether district, 8–12 variable stops, route-order choices, intersections, richer traffic, and access obstacles.
+- **M3 — Atmosphere proof:** layered vehicle, tool, weather, and neighborhood audio with accessible category controls.
+- **M4 — Progression proof:** depot, three shifts, persistent addresses, truck/tool upgrade, and complaint recovery.
+- **M5 — Solo validation:** polish, accessibility baseline, performance validation, and observed evidence that the forgiving solo route is understandable and worth replaying.
+- **M6 — Multiplayer gate:** only after M5 passes, build a narrow driver/loader authority test and record a multiplayer go/no-go decision.
 
 Exit criteria and task ordering are in `BUILD_PREP.md`.
 
@@ -322,11 +328,10 @@ Exit criteria and task ordering are in `BUILD_PREP.md`.
 
 The active sequence is intentionally solo-first and will be completed in this order:
 
-1. Add physical loose bags and one oversized item with readable mass, awkward movement, drops, rupture, and recoverable cleanup.
-2. Expand Maple into a scrolling multi-screen route with intersections, alternate stop order, parked-access obstacles, and stronger route planning.
-3. Add layered truck engine/idle/reverse/compactor sounds and neighborhood ambience with independent volume controls.
-4. Add versioned local persistence for address history, complaints, depot return, and a small truck/tool upgrade choice.
-5. Run and tune repeated solo playtests for interaction clarity, forgiving chaos, route duration, and voluntary retry.
-6. Only after the solo loop passes, build a minimal two-player authority/role test and make an evidence-based multiplayer go/no-go decision.
+1. Expand Maple into a scrolling multi-screen route with intersections, alternate stop order, parked-access obstacles, and stronger route planning.
+2. Add layered truck engine/idle/reverse/compactor sounds and neighborhood ambience with independent volume controls.
+3. Add versioned local persistence for address history, complaints, depot return, and a small truck/tool upgrade choice.
+4. Run and tune repeated solo playtests for interaction clarity, forgiving chaos, route duration, and voluntary retry.
+5. Only after the solo loop passes, build a minimal two-player authority/role test and make an evidence-based multiplayer go/no-go decision.
 
 Cross-cutting work: move score mutations into event reducers, add named input actions/remapping, split simulation/render/audio/persistence modules when route expansion begins, and schedule sanitation-worker interviews before locking handling or consequence tone.

@@ -8,7 +8,7 @@ A living design package and standalone browser vertical slice for a tactile, sys
 
 Open `prototype/index.html` in a modern desktop browser. No install, server, or build step is required.
 
-Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F** to exit the truck. On foot, press **Space** to inspect, **E** to grab or release a bin, then wheel it to the rear hopper. Hold **Space** and counter its sway with **A/D** while loading; grab the empty bin and return it to the amber curb marker. Use **R** to tag contamination, **Q** to check uncertain waste, **C** to compact, **X** to clean spills, and **P** to pause.
+Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F** to exit the truck. On foot, press **Space** to inspect or load and **E** to grab/release bins, bags, and oversized waste. Hold **Space** with **A/D** to balance a bin lift; hold **Shift** to brace an awkward oversized item. Return empty bins to their amber markers. Use **R** to tag contamination, **Q** to check uncertain waste, **C** to compact, **X** to recover spills or ruptured bags, and **P** to pause.
 
 ## Project map
 
@@ -20,7 +20,7 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.6.0` adds the first complete hands-on service loop to the established early-2000s-console urban-noir visual target. The player now leaves the cab, walks the street, inspects and wheels physical bins, loads them at the rear hopper, survives recoverable traffic stumbles, and must return each empty bin before the address counts as serviced. The game remains browser-first; Unity is not part of the plan.
+Version `0.7.0` adds physical loose waste to the hands-on route. A fragile commercial bag can rupture into a recoverable cleanup task; a soaked mattress moves slowly, sways, builds grip stress, and rewards bracing and wide turns. The truck and traffic can interfere with both objects, and affected addresses resolve only after their bin and extra waste are handled. The game remains browser-first; Unity is not part of the plan.
 
 ## Repository and publishing policy
 

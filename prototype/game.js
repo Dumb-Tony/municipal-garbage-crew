@@ -26,7 +26,7 @@
   let muted = false;
   let last = 0;
   let game;
-  const SHIFT_DURATION = 300;
+  const SHIFT_DURATION = 360;
   const SHIFT_SEED = 4040712;
 
   const stopsTemplate = [
@@ -41,6 +41,11 @@
   const trafficTemplate = [
     { x: 430, y: 270, vx: 72, color: "#a64f3f" },
     { x: 820, y: 340, vx: -62, color: "#4f7193" }
+  ];
+
+  const wasteTemplate = [
+    { id: "bag-market", stopId: 4, x: 808, y: 404, type: "bag", label: "MARKET BAG", weight: .7, fragile: true },
+    { id: "mattress-24", stopId: 3, x: 602, y: 184, type: "bulk", label: "SOAKED MATTRESS", weight: 1.5, fragile: false }
   ];
 
   function resetGame() {
@@ -73,8 +78,9 @@
       mode: "truck",
       shake: 0,
       truck: { x: 112, y: 305, angle: 0, speed: 0, stun: 0, collisionCooldown: 0 },
-      worker: { x: 64, y: 305, angle: 0, grabbedStop: null, stumble: 0, collisionCooldown: 0 },
-      stops: stopsTemplate.map(s => ({ ...s, binX: s.x, binY: s.y, state: "waiting", authorized: false, revealed: false, wobble: randomSeeded(s.id) * 6 })),
+      worker: { x: 64, y: 305, angle: 0, grabbedStop: null, grabbedWaste: null, carryStress: 0, lastMoveAngle: 0, stumble: 0, collisionCooldown: 0 },
+      stops: stopsTemplate.map(s => ({ ...s, binX: s.x, binY: s.y, binReturned: false, state: "waiting", authorized: false, revealed: false, wobble: randomSeeded(s.id) * 6 })),
+      waste: wasteTemplate.map(w => ({ ...w, state: "waiting", integrity: 1, angle: w.type === "bulk" ? -.08 : 0 })),
       traffic: trafficTemplate.map(t => ({ ...t }))
     };
     ui.start.classList.remove("hidden");
@@ -142,11 +148,21 @@
     let best = null;
     let bestDistance = Infinity;
     for (const stop of game.stops) {
-      if (["collected", "tagged", "loading"].includes(stop.state)) continue;
+      if (["collected", "tagged", "loading", "awaiting-waste"].includes(stop.state) || stop.binReturned) continue;
       const distance = Math.hypot(stop.binX - origin.x, stop.binY - origin.y);
       if (distance < bestDistance) { best = stop; bestDistance = distance; }
     }
     return { stop: best, distance: bestDistance };
+  }
+
+  function nearestWaste(origin = actorPosition()) {
+    let best = null, bestDistance = Infinity;
+    for (const waste of game.waste) {
+      if (!["ready", "dropped"].includes(waste.state)) continue;
+      const distance = Math.hypot(waste.x - origin.x, waste.y - origin.y);
+      if (distance < bestDistance) { best = waste; bestDistance = distance; }
+    }
+    return { waste: best, distance: bestDistance };
   }
 
   function inspectStop() {
@@ -193,6 +209,7 @@
     ui.decision.classList.add("hidden");
     stop.authorized = true;
     stop.state = "authorized";
+    for (const waste of game.waste.filter(w => w.stopId === stop.id)) waste.state = "ready";
     game.phase = "DRIVE";
     game.activeStop = null;
     recordEvent("service_authorized", { stopId: stop.id });
@@ -237,14 +254,30 @@
   }
 
   function returnBin(stop) {
-    stop.state = "collected";
+    stop.binReturned = true;
+    stop.state = "awaiting-waste";
     stop.binX = stop.x;
     stop.binY = stop.y;
     game.worker.grabbedStop = null;
+    recordEvent("bin_returned", { stopId: stop.id });
+    finalizeStopIfComplete(stop);
+  }
+
+  function finalizeStopIfComplete(stop) {
+    const remaining = game.waste.filter(w => w.stopId === stop.id && !["loaded", "tagged"].includes(w.state));
+    if (!stop.binReturned) {
+      showMessage("Extra curb waste handled. Empty and return this address's bin to finish service.");
+      return;
+    }
+    if (remaining.length) {
+      showMessage(`Bin returned. ${remaining.map(w => w.label.toLowerCase()).join(" and ")} still waiting at this address.`);
+      return;
+    }
+    stop.state = "collected";
     game.collected += 1;
     game.score += 120;
     recordEvent("stop_collected", { stopId: stop.id });
-    showMessage(`${stop.label} serviced and bin returned. +120`);
+    showMessage(`${stop.label} fully serviced. +120`);
     beep(420, .1, "sine");
     checkRouteEnd();
   }
@@ -253,6 +286,7 @@
     const stop = game.activeStop;
     if (game.phase !== "INSPECT" || !stop) return;
     stop.state = "tagged";
+    for (const waste of game.waste.filter(w => w.stopId === stop.id)) waste.state = "tagged";
     game.tagged += 1;
     recordEvent("stop_tagged", { stopId: stop.id, contaminated: stop.contaminated });
     if (stop.contaminated) {
@@ -277,7 +311,7 @@
     if (game.mode === "foot") {
       const hopper = hopperPosition();
       if (Math.hypot(game.worker.x - hopper.x, game.worker.y - hopper.y) > 58) { showMessage("Walk to the rear controls before cycling the compactor."); return; }
-      if (game.worker.grabbedStop) { showMessage("Drop the bin before using the compactor controls."); return; }
+      if (game.worker.grabbedStop || game.worker.grabbedWaste) { showMessage("Set down what you're carrying before using the compactor controls."); return; }
     }
     if (game.compactorCooldown > 0) { showMessage("Compactor is cycling. Give it a moment."); return; }
     if (game.loose < .3) { showMessage("Nothing loose in the hopper."); return; }
@@ -314,15 +348,25 @@
   function cleanSpill() {
     if (game.phase !== "DRIVE") return;
     if (game.mode !== "foot") { showMessage("Stop nearby and press F—the cleanup kit is worked on foot."); return; }
-    if (game.worker.grabbedStop) { showMessage("Set the bin down before opening the cleanup kit."); return; }
+    if (game.worker.grabbedStop || game.worker.grabbedWaste) { showMessage("Set down what you're carrying before opening the cleanup kit."); return; }
     const { spill, distance } = nearestSpill();
     if (!spill || distance > 48) { showMessage("Walk closer to the spill before using the cleanup kit."); return; }
     spill.cleaned = true;
     game.cleanedSpills += 1;
     game.time = Math.max(0, game.time - 3);
     game.score += 40;
-    recordEvent("spill_cleaned", { timeCost: 3 });
-    showMessage("Street cleared with the spill kit. +40 · 3 seconds used");
+    const rupturedWaste = spill.wasteId ? game.waste.find(w => w.id === spill.wasteId) : null;
+    if (rupturedWaste) {
+      rupturedWaste.state = "dropped";
+      rupturedWaste.integrity = 1;
+      rupturedWaste.x = spill.x + 8;
+      rupturedWaste.y = spill.y;
+      recordEvent("bag_recovered", { wasteId: rupturedWaste.id, timeCost: 3 });
+      showMessage("Debris gathered into a replacement bag. Pick it up with E. +40 · 3 seconds used");
+    } else {
+      recordEvent("spill_cleaned", { timeCost: 3 });
+      showMessage("Street cleared with the spill kit. +40 · 3 seconds used");
+    }
     beep(470, .12, "sine");
     if (game.time <= 0) finishGame(true); else checkRouteEnd();
   }
@@ -335,9 +379,12 @@
     const correctTags = game.stops.filter(s => s.state === "tagged" && s.contaminated).length;
     const wrongTags = game.stops.filter(s => s.state === "tagged" && !s.contaminated).length;
     const compactions = game.events.filter(e => e.type === "compactor_cycled").length;
+    const loadedBags = game.waste.filter(w => w.state === "loaded" && w.type === "bag").length;
+    const loadedBulk = game.waste.filter(w => w.state === "loaded" && w.type === "bulk").length;
     const scoreLines = [
       ["Collected service", game.collected * 120], ["Correct contamination tags", correctTags * 70],
       ["Compactor operation", compactions * 25], ["Spill recovery", game.cleanedSpills * 40],
+      ["Loose bags loaded", loadedBags * 35], ["Oversized items loaded", loadedBulk * 55],
       ["Time remaining", Math.floor(game.time) * 2], ["Incorrect tags", wrongTags * -60],
       ["Contaminated loads", game.badLoads * -90], ["Missed stops", missed * -80],
       ["Handling slips", game.handlingDrops * -20], ["Spills created", game.spills * -70],
@@ -354,7 +401,7 @@
     ui.resultStats.innerHTML = [
       ["Score", game.score], ["Collected", `${game.collected}/6`],
       ["Correct tags", game.stops.filter(s => s.state === "tagged" && s.contaminated).length],
-      ["Handling slips", game.handlingDrops], ["Traffic stumbles", game.workerStumbles], ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
+      ["Handling slips", game.handlingDrops], ["Waste loaded", `${loadedBags+loadedBulk}/2`], ["Traffic stumbles", game.workerStumbles], ["Spills cleaned", `${game.cleanedSpills}/${game.spills}`], ["Truck damage", game.damage], ["Time left", `${Math.ceil(game.time)}s`],
       ["Shift seed", game.seed], ["Events logged", game.events.length]
     ].map(([a, b]) => `<span><b>${a}</b><br>${b}</span>`).join("");
     ui.resultLedger.innerHTML = scoreLines.filter(line => line[1] !== 0).map(([label, value]) =>
@@ -383,6 +430,7 @@
     if (game.mode === "truck") {
       updateTruck(dt);
       checkCollisions();
+      checkWasteCollisions();
     } else {
       updateWorker(dt);
       checkWorkerTraffic();
@@ -406,7 +454,7 @@
       beep(260, .06, "square");
       return;
     }
-    if (w.grabbedStop) { showMessage("Release the bin with E before entering the cab."); return; }
+    if (w.grabbedStop || w.grabbedWaste) { showMessage("Set down what you're carrying with E before entering the cab."); return; }
     if (Math.hypot(w.x - t.x, w.y - t.y) > 60) { showMessage("Walk closer to the cab to get in."); return; }
     game.mode = "truck";
     recordEvent("cab_entered");
@@ -424,6 +472,31 @@
       showMessage("Bin released.", 1.2);
       return;
     }
+    if (w.grabbedWaste) {
+      const waste = game.waste.find(item => item.id === w.grabbedWaste);
+      w.grabbedWaste = null;
+      w.carryStress = 0;
+      if (waste) {
+        waste.state = "dropped";
+        const moving = keys.has("KeyW") || keys.has("KeyA") || keys.has("KeyS") || keys.has("KeyD") || keys.has("ArrowUp") || keys.has("ArrowDown") || keys.has("ArrowLeft") || keys.has("ArrowRight");
+        if (waste.fragile && moving) waste.integrity -= .62;
+        recordEvent("waste_dropped", { wasteId: waste.id, hard: moving, integrity: Number(waste.integrity.toFixed(2)) });
+        if (waste.integrity <= .45) ruptureWaste(waste);
+        else showMessage(`${waste.label} set down${moving ? " hard" : ""}.`, 1.4);
+      }
+      return;
+    }
+    const nearbyWaste = nearestWaste(w);
+    if (nearbyWaste.waste && nearbyWaste.distance <= 42) {
+      const waste = nearbyWaste.waste;
+      w.grabbedWaste = waste.id;
+      w.carryStress = waste.type === "bulk" ? .18 : 0;
+      waste.state = "carried";
+      recordEvent("waste_grabbed", { wasteId: waste.id, type: waste.type });
+      showMessage(waste.type === "bulk" ? "Awkward load—hold Shift to brace it while moving." : "Fragile bag—stop moving before you set it down.", 2.8);
+      beep(waste.type === "bulk" ? 135 : 190, .08, "square");
+      return;
+    }
     const { stop, distance } = nearestStop(w);
     if (!stop || distance > 38) { showMessage("No serviceable bin within reach."); return; }
     if (stop.state === "waiting") { showMessage("Inspect this stop with Space before moving its bin."); return; }
@@ -438,7 +511,18 @@
     if (game.phase !== "DRIVE") return;
     if (game.mode === "truck") { inspectStop(); return; }
     const w = game.worker;
-    if (!w.grabbedStop) { inspectStop(); return; }
+    if (w.grabbedWaste) {
+      const waste = game.waste.find(item => item.id === w.grabbedWaste);
+      const hopper = hopperPosition();
+      if (waste && Math.hypot(waste.x - hopper.x, waste.y - hopper.y) <= 58) loadWaste(waste);
+      else showMessage("Carry the item closer to the rear hopper.");
+      return;
+    }
+    if (!w.grabbedStop) {
+      const nearbyWaste = nearestWaste(w);
+      if (nearbyWaste.waste && nearbyWaste.distance <= 42) { showMessage("Press E to pick up this curbside item."); return; }
+      inspectStop(); return;
+    }
     const stop = game.stops.find(s => s.id === w.grabbedStop);
     if (!stop) return;
     if (stop.state === "authorized") {
@@ -453,6 +537,34 @@
     }
   }
 
+  function loadWaste(waste) {
+    if (usedCapacity() + waste.weight > 8) { showMessage("Hopper is full. Set this down and compact first."); beep(110,.18,"sawtooth"); return; }
+    waste.state = "loaded";
+    game.worker.grabbedWaste = null;
+    game.worker.carryStress = 0;
+    game.loose += waste.weight;
+    game.score += waste.type === "bulk" ? 55 : 35;
+    recordEvent("waste_loaded", { wasteId: waste.id, type: waste.type, weight: waste.weight });
+    showMessage(`${waste.label} loaded. +${waste.type === "bulk" ? 55 : 35}`);
+    beep(waste.type === "bulk" ? 115 : 240, .14, "square");
+    const stop = game.stops.find(s => s.id === waste.stopId);
+    if (stop) finalizeStopIfComplete(stop);
+  }
+
+  function ruptureWaste(waste) {
+    waste.state = "ruptured";
+    game.worker.grabbedWaste = null;
+    game.worker.carryStress = 0;
+    game.spills += 1;
+    game.score -= 70;
+    game.spillZones.push({ x: waste.x, y: waste.y, cleaned: false, wasteId: waste.id });
+    recordEvent("bag_ruptured", { wasteId: waste.id });
+    for (let i=0;i<12;i++) game.particles.push({x:waste.x,y:waste.y,vx:(random()-.5)*90,vy:(random()-.5)*90,life:4+random()*2,size:3+random()*5});
+    game.shake=.35;
+    showMessage("The bag split open. Use X nearby to gather and re-bag the debris.",3.2);
+    beep(88,.24,"sawtooth",.06);
+  }
+
   function updateWorker(dt) {
     const w = game.worker;
     w.stumble = Math.max(0, w.stumble - dt);
@@ -461,12 +573,23 @@
     const dx = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
     const dy = (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0);
     const length = Math.hypot(dx, dy) || 1;
-    const speed = w.grabbedStop ? 62 : 82;
+    const carriedWaste = game.waste.find(item => item.id === w.grabbedWaste);
+    const braced = keys.has("ShiftLeft") || keys.has("ShiftRight");
+    const speed = w.grabbedStop ? 62 : carriedWaste?.type === "bulk" ? (braced ? 34 : 46) : carriedWaste ? 60 : 82;
     if (dx || dy) {
-      w.angle = Math.atan2(dy, dx);
+      const nextAngle = Math.atan2(dy, dx);
+      if (carriedWaste?.type === "bulk") {
+        let turn = Math.abs(nextAngle - w.lastMoveAngle);
+        if (turn > Math.PI) turn = Math.PI * 2 - turn;
+        if (turn > 1.7) w.carryStress += braced ? .05 : .24;
+        w.carryStress += dt * (braced ? -.22 : .23);
+      }
+      w.angle = nextAngle;
+      w.lastMoveAngle = nextAngle;
       w.x = Math.max(22, Math.min(W - 22, w.x + dx / length * speed * dt));
       w.y = Math.max(157, Math.min(443, w.y + dy / length * speed * dt));
-    }
+    } else if (carriedWaste?.type === "bulk") w.carryStress -= dt * .38;
+    w.carryStress = Math.max(0, Math.min(1.08, w.carryStress));
     if (w.grabbedStop) {
       const stop = game.stops.find(s => s.id === w.grabbedStop);
       if (stop) {
@@ -475,6 +598,27 @@
         const follow = 1 - Math.pow(.0008, dt);
         stop.binX += (targetX - stop.binX) * follow;
         stop.binY += (targetY - stop.binY) * follow;
+      }
+    }
+    if (carriedWaste) {
+      const reach = carriedWaste.type === "bulk" ? 34 : 20;
+      const sway = carriedWaste.type === "bulk" ? Math.sin(performance.now()/105) * w.carryStress * 13 : 0;
+      const targetX = w.x + Math.cos(w.angle) * reach - Math.sin(w.angle) * sway;
+      const targetY = w.y + Math.sin(w.angle) * reach + Math.cos(w.angle) * sway;
+      const follow = 1 - Math.pow(carriedWaste.type === "bulk" ? .02 : .001, dt);
+      carriedWaste.x += (targetX - carriedWaste.x) * follow;
+      carriedWaste.y += (targetY - carriedWaste.y) * follow;
+      carriedWaste.angle = w.angle + (carriedWaste.type === "bulk" ? Math.sin(performance.now()/105) * w.carryStress * .35 : 0);
+      if (carriedWaste.type === "bulk" && w.carryStress >= 1) {
+        carriedWaste.state = "dropped";
+        w.grabbedWaste = null;
+        w.carryStress = 0;
+        game.handlingDrops += 1;
+        game.score -= 20;
+        game.time = Math.max(0, game.time - 1);
+        recordEvent("bulk_slipped", { wasteId: carriedWaste.id });
+        showMessage("The mattress twisted out of your hands. Brace with Shift and take wider turns.");
+        beep(105,.16,"sawtooth");
       }
     }
   }
@@ -491,6 +635,16 @@
           recordEvent("bin_dropped_in_traffic", { stopId: w.grabbedStop });
           w.grabbedStop = null;
         }
+        if (w.grabbedWaste) {
+          const waste = game.waste.find(item => item.id === w.grabbedWaste);
+          w.grabbedWaste = null;
+          w.carryStress = 0;
+          if (waste) {
+            waste.state = "dropped";
+            if (waste.fragile) { waste.integrity = 0; ruptureWaste(waste); }
+            else recordEvent("bulk_dropped_in_traffic", { wasteId: waste.id });
+          }
+        }
         game.workerStumbles += 1;
         game.score -= 25;
         game.time = Math.max(0, game.time - 2);
@@ -500,6 +654,29 @@
         beep(92, .2, "sawtooth", .06);
         break;
       }
+    }
+  }
+
+  function checkWasteCollisions() {
+    const t=game.truck;
+    if(t.collisionCooldown>0||Math.abs(t.speed)<14)return;
+    for(const waste of game.waste){
+      if(!["ready","dropped"].includes(waste.state))continue;
+      const radius=waste.type==="bulk"?38:22;
+      if(Math.hypot(t.x-waste.x,t.y-waste.y)>=radius+22)continue;
+      t.collisionCooldown=1.1;t.speed*=.22;game.shake=.4;
+      if(waste.fragile){
+        waste.integrity=0;recordEvent("bag_run_over",{wasteId:waste.id});ruptureWaste(waste);
+        showMessage("The truck crushed a curbside bag. Get out and clean up the debris.");
+      }else{
+        waste.x=Math.max(30,Math.min(W-30,waste.x+Math.cos(t.angle)*48));
+        waste.y=Math.max(165,Math.min(435,waste.y+Math.sin(t.angle)*48));
+        game.damage+=1;game.score-=45;
+        recordEvent("bulk_item_struck",{wasteId:waste.id});
+        showMessage("The mattress caught under the truck. It moved, and the bodywork did not enjoy it.");
+        beep(70,.28,"sawtooth",.065);
+      }
+      break;
     }
   }
 
@@ -610,9 +787,10 @@
     const shakeX = game?.shake ? (Math.random() - .5) * game.shake * 12 : 0;
     const shakeY = game?.shake ? (Math.random() - .5) * game.shake * 12 : 0;
     ctx.translate(shakeX, shakeY);
-    drawWorld();
+      drawWorld();
     if (game) {
       drawStops();
+      drawWaste();
       drawObstacles();
       drawSpills();
       drawParticles();
@@ -713,6 +891,24 @@
     }
   }
 
+  function drawWaste() {
+    const actor=actorPosition();
+    for(const waste of game.waste){
+      if(["waiting","loaded","tagged","ruptured"].includes(waste.state))continue;
+      const near=game.mode==="foot"&&![game.worker.grabbedStop,game.worker.grabbedWaste].some(Boolean)&&Math.hypot(waste.x-actor.x,waste.y-actor.y)<=42;
+      ctx.save();ctx.translate(waste.x,waste.y);ctx.rotate(waste.angle||0);
+      if(near){ctx.strokeStyle="#e99b32";ctx.lineWidth=2;ctx.setLineDash([4,3]);ctx.beginPath();ctx.arc(0,0,waste.type==="bulk"?34:19,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
+      ctx.fillStyle="rgba(0,0,0,.5)";ctx.beginPath();ctx.ellipse(3,waste.type==="bulk"?13:9,waste.type==="bulk"?34:15,6,0,0,Math.PI*2);ctx.fill();
+      if(waste.type==="bag"){
+        ctx.fillStyle=waste.integrity<.7?"#72453a":"#252a2b";ctx.beginPath();ctx.moveTo(-12,10);ctx.lineTo(-9,-8);ctx.lineTo(-4,-14);ctx.lineTo(0,-10);ctx.lineTo(5,-14);ctx.lineTo(10,-7);ctx.lineTo(13,10);ctx.closePath();ctx.fill();ctx.strokeStyle="#60615b";ctx.stroke();ctx.fillStyle="#9b6335";ctx.fillRect(-2,-14,5,4);
+      }else{
+        ctx.fillStyle="#777269";ctx.fillRect(-34,-13,68,26);ctx.fillStyle="#4a4a47";ctx.fillRect(-30,-9,60,18);ctx.strokeStyle="#aaa392";ctx.lineWidth=2;ctx.strokeRect(-34,-13,68,26);ctx.strokeStyle="#6d685f";for(let x=-24;x<30;x+=12){ctx.beginPath();ctx.moveTo(x,-8);ctx.lineTo(x+7,8);ctx.stroke();}
+      }
+      if(near){ctx.rotate(-(waste.angle||0));ctx.fillStyle="rgba(8,10,12,.92)";ctx.fillRect(-48,-38,96,14);ctx.fillStyle="#e5ad58";ctx.font="bold 8px Courier New";ctx.textAlign="center";ctx.fillText(`E // ${waste.label}`,0,-28);ctx.textAlign="left";}
+      ctx.restore();
+    }
+  }
+
   function drawObstacles() {
     ctx.save();ctx.translate(455,205);ctx.rotate(.05);drawCar("#746f61",1.15);ctx.restore();
     ctx.fillStyle="rgba(8,10,12,.88)";ctx.fillRect(407,164,96,14);ctx.fillStyle="#d29035";ctx.font="bold 9px Courier New";ctx.fillText("NO ACCESS // PARKED",414,174);
@@ -748,7 +944,7 @@
     ctx.fillStyle="#294036";ctx.fillRect(-10,-12,20,21);ctx.fillStyle="#c48b32";ctx.fillRect(-10,-3,20,3);ctx.fillStyle="#b8b29c";ctx.fillRect(-8,-8,16,2);
     ctx.fillStyle="#76503b";ctx.beginPath();ctx.arc(0,-18,7,0,Math.PI*2);ctx.fill();ctx.fillStyle="#1a2420";ctx.fillRect(-7,-23,14,5);
     ctx.fillStyle="#d39a3b";ctx.fillRect(6,-22,6,2);
-    if(w.grabbedStop){ctx.strokeStyle="#b7b09c";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-7,-4);ctx.lineTo(-18,2);ctx.moveTo(7,-4);ctx.lineTo(-18,7);ctx.stroke();}
+    if(w.grabbedStop||w.grabbedWaste){ctx.strokeStyle="#b7b09c";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-7,-4);ctx.lineTo(16,-1);ctx.moveTo(7,-4);ctx.lineTo(17,5);ctx.stroke();}
     ctx.restore();
   }
 
@@ -789,8 +985,10 @@
     const nearbySpill = nearestSpill();
     if(game.mode==="truck") return Math.abs(game.truck.speed)>10?"BRAKE · F TO EXIT CAB":"F · EXIT CAB   C · COMPACT";
     const w=game.worker;
-    if(nearbySpill.spill&&nearbySpill.distance<=48&&!w.grabbedStop)return"X · CLEAN SPILL";
+    if(nearbySpill.spill&&nearbySpill.distance<=48&&!w.grabbedStop&&!w.grabbedWaste)return"X · CLEAN SPILL";
+    if(w.grabbedWaste){const waste=game.waste.find(item=>item.id===w.grabbedWaste);const h=hopperPosition();if(waste&&Math.hypot(waste.x-h.x,waste.y-h.y)<=58)return"SPACE · LOAD ITEM";return waste?.type==="bulk"?"HOLD SHIFT · BRACE  /  TAKE WIDE TURNS":"CARRY BAG TO REAR HOPPER";}
     if(w.grabbedStop){const stop=game.stops.find(s=>s.id===w.grabbedStop);if(stop?.state==="authorized"){const h=hopperPosition();return Math.hypot(stop.binX-h.x,stop.binY-h.y)<=48?"SPACE · LOAD HOPPER":"WHEEL BIN TO REAR HOPPER";}if(stop?.state==="empty")return Math.hypot(stop.binX-stop.x,stop.binY-stop.y)<=42?"SPACE · RETURN BIN":"WHEEL BIN TO AMBER MARKER";}
+    const nearbyWaste=nearestWaste(w);if(nearbyWaste.waste&&nearbyWaste.distance<=42)return`E · GRAB ${nearbyWaste.waste.label}`;
     if(Math.hypot(w.x-game.truck.x,w.y-game.truck.y)<=60)return"F · ENTER CAB";
     const nearbyStop = nearestStop(w);
     if(nearbyStop.stop&&nearbyStop.distance<=40)return nearbyStop.stop.state==="waiting"?`SPACE · INSPECT ${nearbyStop.stop.label.toUpperCase()}`:"E · GRAB BIN";
@@ -810,6 +1008,7 @@
     const prompt = contextualPrompt();
     if(prompt){ctx.fillStyle="rgba(7,10,13,.9)";ctx.fillRect(310,100,340,28);ctx.strokeStyle="#5d4a32";ctx.strokeRect(310,100,340,28);ctx.fillStyle="#e2a34c";ctx.font="bold 10px Courier New";ctx.textAlign="center";ctx.fillText(prompt,480,118);ctx.textAlign="left";}
     if (game.phase === "LOAD" && game.loading) drawHandlingMeter();
+    if(game.mode==="foot"&&game.worker.grabbedWaste&&game.waste.find(w=>w.id===game.worker.grabbedWaste)?.type==="bulk")drawCarryMeter();
     if(game.messageTime>0){ctx.fillStyle="rgba(7,10,13,.94)";ctx.fillRect(175,532,610,38);ctx.fillStyle="#8e5e31";ctx.fillRect(175,532,4,38);ctx.strokeStyle="#403d37";ctx.strokeRect(175,532,610,38);ctx.fillStyle="#d9d4c6";ctx.font="bold 11px Courier New";ctx.textAlign="center";ctx.fillText(`DISPATCH // ${game.message.toUpperCase()}`,480,555);ctx.textAlign="left";}
   }
 
@@ -820,15 +1019,18 @@
     ctx.fillStyle="#282d2e";ctx.fillRect(290,494,380,12);ctx.fillStyle=Math.abs(load.balance)>.78?"#b74534":"#7d8b4d";ctx.fillRect(478+load.balance*160,492,9,16);ctx.fillStyle="#e9a040";ctx.fillRect(480,494,3,12);
   }
 
+  function drawCarryMeter(){const stress=game.worker.carryStress;ctx.fillStyle="rgba(7,10,13,.92)";ctx.fillRect(354,136,252,29);ctx.strokeStyle="#514838";ctx.strokeRect(354,136,252,29);ctx.fillStyle="#282d2e";ctx.fillRect(365,148,230,7);ctx.fillStyle=stress>.75?"#b74534":"#7d8b4d";ctx.fillRect(365,148,230*stress,7);ctx.fillStyle="#d9d4c6";ctx.font="bold 8px Courier New";ctx.fillText("GRIP STRESS // SHIFT TO BRACE",365,145);}
+
   function drawRouteArrow() {
     const { stop } = nearestStop();
+    const { waste } = nearestWaste();
     const { spill } = nearestSpill();
-    const target = stop || spill;
+    const target = waste || stop || spill;
     if (!target) return;
-    const actor=actorPosition();const tx=stop?stop.binX:target.x;const ty=stop?stop.binY:target.y;
+    const actor=actorPosition();const tx=waste?waste.x:stop?stop.binX:target.x;const ty=waste?waste.y:stop?stop.binY:target.y;
     const angle = Math.atan2(ty-actor.y, tx-actor.x);
     ctx.save();ctx.translate(900,113);ctx.rotate(angle);ctx.fillStyle="#e99b32";ctx.beginPath();ctx.moveTo(16,0);ctx.lineTo(-10,-8);ctx.lineTo(-4,0);ctx.lineTo(-10,8);ctx.closePath();ctx.fill();ctx.restore();
-    ctx.fillStyle="#9a682f";ctx.font="bold 9px Courier New";ctx.textAlign="right";ctx.fillText(stop?stop.label.toUpperCase():"SPILL CLEANUP",870,116);ctx.textAlign="left";
+    ctx.fillStyle="#9a682f";ctx.font="bold 9px Courier New";ctx.textAlign="right";ctx.fillText(waste?waste.label:stop?stop.label.toUpperCase():"SPILL CLEANUP",870,116);ctx.textAlign="left";
   }
 
   function frame(now) {
