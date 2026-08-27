@@ -14,6 +14,7 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Itemized result ledger | Auditable end-of-shift score | S | Event ledger |
 | Done | Copyable solo playtest report | Comparable seed, timing, route, consequence, and assist evidence | S | Event ledger |
 | Done | Shared pure rules module + native tests | One tested source for final score, progression bounds, history, and stop invariants | M | Event ledger |
+| Done | Fixed 60 Hz simulation clock | Refresh-independent handling with capped catch-up and timing tests | M | Pure rules/tests |
 | P0 | Event-driven score reducer | Replay-safe score mutations and rule tests | M | Event ledger |
 | Done | Spill recovery interaction | Mistake becomes new work, not only penalty | M | Event ledger |
 | Done | Ambiguous contamination inspection | Genuine time-versus-certainty decision | M | Event ledger |
@@ -186,9 +187,11 @@ prototype/
   styles.css
   rules.js
   input.js
+  timing.js
   game.js
   tests/input.test.js
   tests/rules.test.js
+  tests/timing.test.js
 docs/
   GDD.md
   BUILD_PREP.md
@@ -276,6 +279,8 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Reset bindings; verify defaults return while movement arrows and right Shift work before and after custom remaps.
 - [ ] Compare identical early closures with and without Relaxed Clock; duration changes from 600 to 720 seconds while the maximum time bonus remains +1200.
 - [ ] File a complete, partial, and timed-out route; expand and copy each playtest report, verifying seed, assists, timings, route order, outcome, and progression values against the results screen.
+- [ ] Run equivalent input captures at 30, 60, and 120 Hz display pacing; route time, movement distance, handling progress, traffic motion, and collision outcomes remain within one 60 Hz step.
+- [ ] Suspend or stall rendering for more than 250 ms; verify catch-up is capped, the route remains responsive, and discarded time appears in the report.
 
 ### Boundary and state cases
 
@@ -298,13 +303,13 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (generated in 0.14.0)
+### Playtest telemetry (generated in 0.15.0)
 
-The results screen generates a copyable report containing the shift seed, active assists, active primary bindings, elapsed time, first movement from either control mode, cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, spills and cleanup, stumbles, damage, score, complaints, credits, trust, installed upgrades, average frame rate, worst frame, slow-frame count, viewport, and display pixel ratio. The observer still records confusion, voluntary retry, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
+The results screen generates a copyable report containing the shift seed, active assists, active primary bindings, elapsed time, first movement from either control mode, cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, spills and cleanup, stumbles, damage, score, complaints, credits, trust, installed upgrades, average frame rate, worst frame, slow-frame count, fixed simulation-step count, discarded stall time, viewport, and display pixel ratio. The observer still records confusion, voluntary retry, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
 
 ## Explicit next implementation tasks
 
-1. Run at least five fresh external solo sessions on build 0.14.0, collecting the generated report plus observer notes for each.
+1. Run at least five fresh external solo sessions on build 0.15.0, collecting the generated report plus observer notes for each.
 2. Tune clarity, pacing, economy, accessibility, and audio fatigue from that evidence, then repeat any failed M5 exit checks.
 3. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
 4. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo, persistence migrations, and stop-state invariants.

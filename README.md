@@ -20,9 +20,9 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.14.0` adds a persistent remappable keyboard action layer. Every driving, walking, work, contamination, compactor, cleanup, pause, mute, and brace input can be rebound at the depot; conflicts and unsafe browser keys are rejected, movement arrows and right Shift remain reliable fallbacks, and all prompts plus the canvas accessibility description follow the chosen layout. Playtest reports record the active bindings alongside assists and performance evidence. The game remains browser-first; Unity is not part of the plan.
+Version `0.15.0` moves the complete route simulation onto a fixed 60 Hz clock independent of display refresh. Truck and worker handling, traffic, cargo, loading, collisions, audio state, and the shift timer now receive identical time steps at 30, 60, 120, or irregular rendering rates; long stalls are capped to prevent runaway catch-up. Reports record simulation steps and discarded stall time alongside frame performance. Persistent remappable keyboard actions remain intact. The game remains browser-first; Unity is not part of the plan.
 
-Run `npm test` to verify input mapping, remap safety, scoring, campaign bounds, address history, and stop-state invariants. No install or build step is required.
+Run `npm test` to verify fixed-step timing, input mapping, remap safety, scoring, campaign bounds, address history, and stop-state invariants. No install or build step is required.
 
 ## Repository and publishing policy
 

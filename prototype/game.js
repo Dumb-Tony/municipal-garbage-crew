@@ -3,8 +3,10 @@
 
   const Rules = window.MGCRules;
   const Input = window.MGCInput;
+  const Timing = window.MGCTiming;
   if (!Rules) throw new Error("Municipal Garbage Crew rules failed to load.");
   if (!Input) throw new Error("Municipal Garbage Crew input map failed to load.");
+  if (!Timing) throw new Error("Municipal Garbage Crew timing system failed to load.");
   const canvas = document.querySelector("#game");
   const ctx = canvas.getContext("2d");
   const ui = {
@@ -50,6 +52,7 @@
   let audio = null;
   let muted = false;
   let last = 0;
+  const simulation = Timing.createFixedStepper(1 / 60, .25);
   let game;
   let rebindingAction = null;
   const SHIFT_DURATION = Rules.STANDARD_SHIFT_DURATION;
@@ -123,6 +126,7 @@
   function buyUpgrade(id){const upgrade=UPGRADES.find(item=>item.id===id);if(!upgrade||campaign.upgrades[id]||campaign.credits<upgrade.cost)return;campaign.credits-=upgrade.cost;campaign.upgrades[id]=true;saveCampaign();renderDepot();showMessage(`${upgrade.name} installed for the next shift.`);beep(530,.16,"triangle",.05);}
 
   function resetGame() {
+    simulation.reset();
     const shiftSeed=SHIFT_SEED+campaign.shifts*7919;
     const assists={relaxedClock:campaign.settings.relaxedClock,handlingAssist:campaign.settings.handlingAssist,lightTraffic:campaign.settings.lightTraffic,reducedShake:campaign.settings.reducedShake,highContrast:campaign.settings.highContrast};
     const duration=assists.relaxedClock?SHIFT_DURATION+120:SHIFT_DURATION;
@@ -132,7 +136,7 @@
       rngState: shiftSeed,
       persisted: false,
       events: [],
-      metrics: { firstMovement: null, frameCount: 0, totalFrameMs: 0, worstFrameMs: 0, longFrames: 0 },
+      metrics: { firstMovement: null, frameCount: 0, totalFrameMs: 0, worstFrameMs: 0, longFrames: 0, simulationSteps: 0, droppedSimulationMs: 0 },
       time: duration,
       duration,
       assists,
@@ -280,6 +284,7 @@
   function startGame() {
     if (game.phase !== "READY") return;
     ensureAudio();
+    simulation.reset();
     last = performance.now();
     game.phase = "DRIVE";
     recordEvent("shift_started", { seed: game.seed });
@@ -588,16 +593,16 @@
     const averageFrame=game.metrics.frameCount?game.metrics.totalFrameMs/game.metrics.frameCount:0;
     const averageFps=averageFrame?Math.round(1000/averageFrame):0;
     const lines=[
-      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.14.0",
+      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.15.0",
       `Shift ${campaign.shifts} · seed ${game.seed} · ${timedOut?"clock expired":unresolved()?"ended early":"route complete"}`,
       `Assists: ${activeAssistNames().join(", ")||"none"}`,
       `Bindings: move ${["forward","left","reverse","right"].map(keyLabel).join("/")} · work ${keyLabel("work")} · grab ${keyLabel("grab")} · cab ${keyLabel("cab")} · tag ${keyLabel("tag")} · check ${keyLabel("inspect")} · compact ${keyLabel("compact")} · clean ${keyLabel("cleanup")} · brace ${keyLabel("brace")}`,
-      `Elapsed: ${Math.round(game.duration-game.time)}s / ${game.duration}s · score ${game.score} · complaints ${game.complaints}`,
+      `Elapsed: ${(game.duration-game.time).toFixed(1)}s / ${game.duration}s · score ${game.score} · complaints ${game.complaints}`,
       `First movement ${first("first_movement")} · cab exit ${first("cab_exited")} · inspection ${first("stop_inspected")} · resolution ${resolved[0]?`${resolved[0].at}s`:"—"}`,
       `Resolved ${TOTAL_STOPS-unresolved()}/${TOTAL_STOPS} · order: ${order}`,
       `Compactions ${game.events.filter(e=>e.type==="compactor_cycled").length} · collisions ${game.events.filter(e=>e.type==="collision").length} · handling slips ${game.handlingDrops}`,
       `Spills ${game.spills} · cleaned ${game.cleanedSpills} · traffic stumbles ${game.workerStumbles} · truck damage ${game.damage}`,
-      `Performance ${averageFps||"—"} fps avg · worst ${Math.round(game.metrics.worstFrameMs)}ms · slow frames ${game.metrics.longFrames}/${game.metrics.frameCount} · view ${innerWidth}×${innerHeight}@${devicePixelRatio}`,
+      `Performance ${averageFps||"—"} fps avg · worst ${Math.round(game.metrics.worstFrameMs)}ms · slow frames ${game.metrics.longFrames}/${game.metrics.frameCount} · sim 60Hz/${game.metrics.simulationSteps} steps · dropped ${Math.round(game.metrics.droppedSimulationMs)}ms · view ${innerWidth}×${innerHeight}@${devicePixelRatio}`,
       `Credits +$${game.earnings} · trust ${campaign.trust} · upgrades ${UPGRADES.filter(u=>campaign.upgrades[u.id]).map(u=>u.name).join(", ")||"none"}`
     ];return lines.join("\n");
   }
@@ -1271,11 +1276,13 @@
 
   function frame(now) {
     const rawFrameMs=last?now-last:0;last=now;
-    if(rawFrameMs>0&&game&&!['READY','RESULT','PAUSED'].includes(game.phase)){
+    const activeFrame=rawFrameMs>0&&game&&!['READY','RESULT','PAUSED'].includes(game.phase);
+    if(activeFrame){
       game.metrics.frameCount+=1;game.metrics.totalFrameMs+=rawFrameMs;game.metrics.worstFrameMs=Math.max(game.metrics.worstFrameMs,rawFrameMs);if(rawFrameMs>34)game.metrics.longFrames+=1;
     }
-    const dt = Math.min(.033, rawFrameMs/1000 || 0);
-    update(dt); draw(); requestAnimationFrame(frame);
+    const timing=simulation.advance(rawFrameMs/1000||0,update);
+    if(activeFrame){game.metrics.simulationSteps+=timing.steps;game.metrics.droppedSimulationMs+=timing.droppedSeconds*1000;}
+    draw(); requestAnimationFrame(frame);
   }
 
   function togglePause(forcePause = false) {
