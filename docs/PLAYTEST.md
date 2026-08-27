@@ -1,6 +1,6 @@
 # Municipal Garbage Crew — 10-Minute Playtest
 
-**Build:** 0.13.0
+**Build:** 0.14.0
 **Tester:**  
 **Date / browser:**  
 **Shift setup / assists:**
@@ -12,6 +12,8 @@ Do not explain the controls beyond what the game shows. Ask the player to run th
 - Seconds to first movement:
 - Seconds to first successfully resolved stop:
 - Did the player exit the cab without help?
+- Did they inspect or change keyboard bindings? Was the process clear?
+- Remapped action / new key / did every visible prompt update?
 - Did they understand that the empty bin must be returned?
 - Bin drops / traffic stumbles:
 - Fragile bag: loaded / ruptured / recovered:

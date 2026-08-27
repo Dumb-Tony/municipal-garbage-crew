@@ -21,7 +21,8 @@ This document translates the living GDD into an executable plan. Priority means:
 | Done | Hands-on bin handling | Hold-to-lift, counter-sway, slip recovery and penalty | M | Route loop |
 | Done | Safe route spawn/collision pass | No immediate traffic damage; road-constrained driving | S | Truck movement |
 | Done | PS2-era urban-noir presentation target | Cohesive title, world, weather, vehicle, HUD, overlay, and social-preview art direction | L | Current slice |
-| P0 | Remappable input/gamepad layer | Device-independent actions | M | Current input |
+| Done | Named action + remappable keyboard layer | Persistent conflict-safe bindings and dynamic prompts | M | Current input |
+| P1 | Gamepad action adapter | Feed the same named actions from controller input | M | Named action layer |
 | P0 | Five-person usability playtest | Evidence for M0 decision | S | Current slice |
 | Done | On-foot loader foundation | Exit/enter, walk, grab/release, wheel, load, return | L | Current input |
 | Done | Selective container/waste physics | Bin wheels, grip stress, bag integrity, carry/drop/load states | L | Loader greybox |
@@ -127,7 +128,7 @@ Only after M5 passes: two players, driver/loader handoff, safe-move call, shared
 | Audio mix | Footer sliders | Independently adjusts Truck, Street, and Effects buses |
 | End shift | Footer button | Files unresolved stops as missed pickups, persists consequences, and opens results |
 
-Next input layer should emit named actions independent of devices, support remapping and gamepad, ignore repeats for discrete actions, clear held state on focus loss, and expose hold/toggle policies.
+The current keyboard layer emits named actions independent of key codes, supports persistent remapping, ignores repeats for discrete actions, clears held state on focus loss, rejects conflicts/reserved keys, and preserves movement/brace fallbacks. The next device step is a gamepad adapter feeding the same actions plus explicit hold/toggle policies for accessibility.
 
 ## State-machine specification
 
@@ -184,7 +185,9 @@ prototype/
   index.html
   styles.css
   rules.js
+  input.js
   game.js
+  tests/input.test.js
   tests/rules.test.js
 docs/
   GDD.md
@@ -268,6 +271,9 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Accumulate credits and buy each upgrade in separate test saves; verify cost, installed state, rank, reload persistence, and advertised mechanical effect.
 - [ ] Verify Hydraulic Assist changes lift rate, Hopper Baffles changes both limit and HUD, and Winter Tires changes handling and spill probability without removing risk.
 - [ ] Toggle every shift-setup option, reload, and verify its checked state and visible/mechanical effect persist.
+- [ ] Rebind every keyboard action, reload, and verify held/discrete behavior, start-card controls, HUD prompts, status messages, canvas label, and report all use the new primary keys.
+- [ ] Attempt duplicate, Escape, Enter, Tab, modifier-only, F5, F11, and F12 bindings; verify conflicts/reserved keys are rejected without losing the prior binding.
+- [ ] Reset bindings; verify defaults return while movement arrows and right Shift work before and after custom remaps.
 - [ ] Compare identical early closures with and without Relaxed Clock; duration changes from 600 to 720 seconds while the maximum time bonus remains +1200.
 - [ ] File a complete, partial, and timed-out route; expand and copy each playtest report, verifying seed, assists, timings, route order, outcome, and progression values against the results screen.
 
@@ -292,13 +298,13 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (generated in 0.13.0)
+### Playtest telemetry (generated in 0.14.0)
 
-The results screen generates a copyable report containing the shift seed, active assists, elapsed time, first movement from either control mode, cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, spills and cleanup, stumbles, damage, score, complaints, credits, trust, installed upgrades, average frame rate, worst frame, slow-frame count, viewport, and display pixel ratio. The observer still records confusion, voluntary retry, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
+The results screen generates a copyable report containing the shift seed, active assists, active primary bindings, elapsed time, first movement from either control mode, cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, spills and cleanup, stumbles, damage, score, complaints, credits, trust, installed upgrades, average frame rate, worst frame, slow-frame count, viewport, and display pixel ratio. The observer still records confusion, voluntary retry, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
 
 ## Explicit next implementation tasks
 
-1. Run at least five fresh external solo sessions on build 0.13.0, collecting the generated report plus observer notes for each.
+1. Run at least five fresh external solo sessions on build 0.14.0, collecting the generated report plus observer notes for each.
 2. Tune clarity, pacing, economy, accessibility, and audio fatigue from that evidence, then repeat any failed M5 exit checks.
 3. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
 4. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo, persistence migrations, and stop-state invariants.

@@ -2,7 +2,9 @@
   "use strict";
 
   const Rules = window.MGCRules;
+  const Input = window.MGCInput;
   if (!Rules) throw new Error("Municipal Garbage Crew rules failed to load.");
+  if (!Input) throw new Error("Municipal Garbage Crew input map failed to load.");
   const canvas = document.querySelector("#game");
   const ctx = canvas.getContext("2d");
   const ui = {
@@ -28,6 +30,9 @@
     lightTraffic: document.querySelector("#lightTraffic"),
     reducedShake: document.querySelector("#reducedShake"),
     highContrast: document.querySelector("#highContrast"),
+    controlSummary: document.querySelector("#controlSummary"),
+    bindingList: document.querySelector("#bindingList"),
+    resetBindings: document.querySelector("#resetBindingsButton"),
     playtestReport: document.querySelector("#playtestReport"),
     copyReport: document.querySelector("#copyReportButton"),
     status: document.querySelector("#statusText"),
@@ -46,6 +51,7 @@
   let muted = false;
   let last = 0;
   let game;
+  let rebindingAction = null;
   const SHIFT_DURATION = Rules.STANDARD_SHIFT_DURATION;
   const SHIFT_SEED = 4040712;
 
@@ -92,11 +98,16 @@
     {id:"winterTires",name:"Winter Tires",cost:500,description:"Sharper control and fewer collision spills."}
   ];
 
-  function defaultCampaign(){return{version:SAVE_VERSION,shifts:0,credits:0,trust:50,bestScore:0,addressHistory:{},upgrades:{},lastShift:null,settings:{vehicle:72,street:55,effects:78,relaxedClock:true,handlingAssist:true,lightTraffic:false,reducedShake:false,highContrast:false}};}
-  function loadCampaign(){try{const parsed=JSON.parse(localStorage.getItem(SAVE_KEY));if(!parsed||parsed.version!==SAVE_VERSION)return defaultCampaign();const base=defaultCampaign();return{...base,...parsed,addressHistory:{...base.addressHistory,...parsed.addressHistory},upgrades:{...base.upgrades,...parsed.upgrades},settings:{...base.settings,...parsed.settings}};}catch(_){return defaultCampaign();}}
+  function defaultCampaign(){return{version:SAVE_VERSION,shifts:0,credits:0,trust:50,bestScore:0,addressHistory:{},upgrades:{},lastShift:null,settings:{vehicle:72,street:55,effects:78,relaxedClock:true,handlingAssist:true,lightTraffic:false,reducedShake:false,highContrast:false,bindings:Input.defaultBindings()}};}
+  function loadCampaign(){try{const parsed=JSON.parse(localStorage.getItem(SAVE_KEY));if(!parsed||parsed.version!==SAVE_VERSION)return defaultCampaign();const base=defaultCampaign();const loaded={...base,...parsed,addressHistory:{...base.addressHistory,...parsed.addressHistory},upgrades:{...base.upgrades,...parsed.upgrades},settings:{...base.settings,...parsed.settings}};loaded.settings.bindings=Input.normalizeBindings(loaded.settings.bindings);return loaded;}catch(_){return defaultCampaign();}}
   let campaign=loadCampaign();
-  function saveCampaign(){try{campaign.settings={vehicle:Number(ui.vehicleVolume.value),street:Number(ui.streetVolume.value),effects:Number(ui.effectsVolume.value),relaxedClock:ui.relaxedClock.checked,handlingAssist:ui.handlingAssist.checked,lightTraffic:ui.lightTraffic.checked,reducedShake:ui.reducedShake.checked,highContrast:ui.highContrast.checked};localStorage.setItem(SAVE_KEY,JSON.stringify(campaign));}catch(_){/* Persistence is optional on restricted origins. */}}
-  function applyCampaignSettings(){ui.vehicleVolume.value=campaign.settings.vehicle;ui.streetVolume.value=campaign.settings.street;ui.effectsVolume.value=campaign.settings.effects;ui.relaxedClock.checked=campaign.settings.relaxedClock;ui.handlingAssist.checked=campaign.settings.handlingAssist;ui.lightTraffic.checked=campaign.settings.lightTraffic;ui.reducedShake.checked=campaign.settings.reducedShake;ui.highContrast.checked=campaign.settings.highContrast;document.body.classList.toggle("high-contrast",ui.highContrast.checked);}
+  function saveCampaign(){try{campaign.settings={vehicle:Number(ui.vehicleVolume.value),street:Number(ui.streetVolume.value),effects:Number(ui.effectsVolume.value),relaxedClock:ui.relaxedClock.checked,handlingAssist:ui.handlingAssist.checked,lightTraffic:ui.lightTraffic.checked,reducedShake:ui.reducedShake.checked,highContrast:ui.highContrast.checked,bindings:Input.normalizeBindings(campaign.settings.bindings)};localStorage.setItem(SAVE_KEY,JSON.stringify(campaign));}catch(_){/* Persistence is optional on restricted origins. */}}
+  function applyCampaignSettings(){ui.vehicleVolume.value=campaign.settings.vehicle;ui.streetVolume.value=campaign.settings.street;ui.effectsVolume.value=campaign.settings.effects;ui.relaxedClock.checked=campaign.settings.relaxedClock;ui.handlingAssist.checked=campaign.settings.handlingAssist;ui.lightTraffic.checked=campaign.settings.lightTraffic;ui.reducedShake.checked=campaign.settings.reducedShake;ui.highContrast.checked=campaign.settings.highContrast;document.body.classList.toggle("high-contrast",ui.highContrast.checked);renderBindings();}
+  function held(action){return Input.isActionDown(action,keys,campaign.settings.bindings);}
+  function escapeHTML(value){return String(value).replace(/[&<>"']/g,character=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[character]);}
+  function keyLabel(action){return Input.formatCode(campaign.settings.bindings[action]);}
+  function renderControlSummary(){const move=["forward","left","reverse","right"].map(keyLabel).join("/");ui.controlSummary.innerHTML=`<span><b>${escapeHTML(move)} / Arrows</b> Drive / walk</span><span><b>${escapeHTML(keyLabel("cab"))}</b> Exit / enter truck</span><span><b>${escapeHTML(keyLabel("work"))}</b> Inspect / load / return</span><span><b>${escapeHTML(keyLabel("grab"))} / ${escapeHTML(keyLabel("tag"))} / ${escapeHTML(keyLabel("inspect"))}</b> Grab / tag / check</span><span><b>Hold ${escapeHTML(keyLabel("brace"))}</b> Brace oversized waste</span><span><b>${escapeHTML(keyLabel("compact"))} / ${escapeHTML(keyLabel("cleanup"))}</b> Compact / clean spill</span><span><b>Hold ${escapeHTML(keyLabel("work"))} + ${escapeHTML(keyLabel("left"))}/${escapeHTML(keyLabel("right"))}</b> Lift / balance bin</span>`;canvas.setAttribute("aria-label",`Top-down sanitation game. Current primary movement keys are ${move}; arrow keys remain available. ${keyLabel("cab")} enters or exits the truck, ${keyLabel("work")} performs contextual work, ${keyLabel("grab")} grabs or releases objects, ${keyLabel("brace")} braces oversized items, ${keyLabel("tag")} tags contamination, ${keyLabel("inspect")} checks uncertain waste, ${keyLabel("cleanup")} cleans spills, and ${keyLabel("compact")} runs the compactor.`);}
+  function renderBindings(){ui.bindingList.innerHTML=Input.ACTION_ORDER.map(action=>`<label class="binding-row"><span>${Input.ACTIONS[action].label}</span><button type="button" data-bind-action="${action}" class="${rebindingAction===action?"listening":""}" aria-label="Rebind ${Input.ACTIONS[action].label}">${rebindingAction===action?"Press key…":escapeHTML(keyLabel(action))}</button></label>`).join("");renderControlSummary();}
   function activeAssistNames(){return Object.entries({"Relaxed clock":game.assists.relaxedClock,"Handling assist":game.assists.handlingAssist,"Light traffic":game.assists.lightTraffic,"Reduced shake":game.assists.reducedShake,"High contrast":game.assists.highContrast}).filter(([,on])=>on).map(([name])=>name);}
   function capacityLimit(){return campaign.upgrades.hopperBaffles?10:8;}
   function renderDepot(){
@@ -259,8 +270,8 @@
     audio.nodes.windGain.gain.setTargetAtTime(active?.038:0,now,.35);audio.nodes.humGain.gain.setTargetAtTime(active?.006:0,now,.4);
 
     audio.reverseTimer-=dt;if(active&&game.mode==="truck"&&game.truck.speed<-8&&audio.reverseTimer<=0){beep(860,.09,"square",.045,"vehicle");audio.reverseTimer=.52;}
-    audio.brakeTimer-=dt;const braking=game.mode==="truck"&&((game.truck.speed>18&&(keys.has("KeyS")||keys.has("ArrowDown")))||(game.truck.speed<-18&&(keys.has("KeyW")||keys.has("ArrowUp"))));if(active&&braking&&audio.brakeTimer<=0){beep(118,.11,"sawtooth",.018,"vehicle");audio.brakeTimer=.28;}
-    const walking=game.mode==="foot"&&game.phase==="DRIVE"&&(keys.has("KeyW")||keys.has("KeyA")||keys.has("KeyS")||keys.has("KeyD")||keys.has("ArrowUp")||keys.has("ArrowDown")||keys.has("ArrowLeft")||keys.has("ArrowRight"));
+    audio.brakeTimer-=dt;const braking=game.mode==="truck"&&((game.truck.speed>18&&held("reverse"))||(game.truck.speed<-18&&held("forward")));if(active&&braking&&audio.brakeTimer<=0){beep(118,.11,"sawtooth",.018,"vehicle");audio.brakeTimer=.28;}
+    const walking=game.mode==="foot"&&game.phase==="DRIVE"&&(held("forward")||held("reverse")||held("left")||held("right"));
     audio.footstepTimer-=dt;if(walking&&audio.footstepTimer<=0){beep(game.worker.grabbedWaste?82:96,.045,"triangle",.012,"effects");audio.footstepTimer=game.worker.grabbedWaste?.42:.31;}
     audio.trafficTimer-=dt;if(active&&audio.trafficTimer<=0){const near=game.traffic.some(car=>Math.hypot(car.x-actorPosition().x,car.y-actorPosition().y)<105);if(near){beep(72,.18,"sine",.011,"street");audio.trafficTimer=.7;}}
     audio.neighborhoodTimer-=dt;if(active&&audio.neighborhoodTimer<=0){beep(245,.28,"sine",.006,"street");setTimeout(()=>beep(205,.32,"sine",.005,"street"),170);audio.neighborhoodTimer=9+Math.random()*7;}
@@ -273,7 +284,7 @@
     game.phase = "DRIVE";
     recordEvent("shift_started", { seed: game.seed });
     ui.start.classList.add("hidden");
-    setStatus("Follow the amber arrow. Stop near a curb and press F to exit the cab.");
+    setStatus(`Follow the amber arrow. Stop near a curb and press ${keyLabel("cab")} to exit the cab.`);
     canvas.focus();
     beep(440, .12, "sawtooth");
   }
@@ -316,7 +327,7 @@
 
   function inspectStop() {
     if (game.phase !== "DRIVE") return;
-    if (game.mode !== "foot") { showMessage("Stop the truck and press F to step out at the curb."); return; }
+    if (game.mode !== "foot") { showMessage(`Stop the truck and press ${keyLabel("cab")} to step out at the curb.`); return; }
     if (game.worker.grabbedStop) { showMessage("Set the bin down with E before inspecting another stop."); return; }
     const { stop, distance } = nearestStop();
     if (!stop || stop.state !== "waiting" || distance > 40) { showMessage("Walk closer to a waiting curb bin."); return; }
@@ -364,7 +375,7 @@
     game.phase = "DRIVE";
     game.activeStop = null;
     recordEvent("service_authorized", { stopId: stop.id });
-    showMessage("Pickup approved. Press E to grab the bin and wheel it to the rear hopper.", 3.2);
+    showMessage(`Pickup approved. Press ${keyLabel("grab")} to grab the bin and wheel it to the rear hopper.`, 3.2);
     beep(150, .14, "square");
   }
 
@@ -498,7 +509,7 @@
 
   function cleanSpill() {
     if (game.phase !== "DRIVE") return;
-    if (game.mode !== "foot") { showMessage("Stop nearby and press F—the cleanup kit is worked on foot."); return; }
+    if (game.mode !== "foot") { showMessage(`Stop nearby and press ${keyLabel("cab")}—the cleanup kit is worked on foot.`); return; }
     if (game.worker.grabbedStop || game.worker.grabbedWaste) { showMessage("Set down what you're carrying before opening the cleanup kit."); return; }
     const { spill, distance } = nearestSpill();
     if (!spill || distance > 48) { showMessage("Walk closer to the spill before using the cleanup kit."); return; }
@@ -577,9 +588,10 @@
     const averageFrame=game.metrics.frameCount?game.metrics.totalFrameMs/game.metrics.frameCount:0;
     const averageFps=averageFrame?Math.round(1000/averageFrame):0;
     const lines=[
-      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.13.0",
+      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.14.0",
       `Shift ${campaign.shifts} · seed ${game.seed} · ${timedOut?"clock expired":unresolved()?"ended early":"route complete"}`,
       `Assists: ${activeAssistNames().join(", ")||"none"}`,
+      `Bindings: move ${["forward","left","reverse","right"].map(keyLabel).join("/")} · work ${keyLabel("work")} · grab ${keyLabel("grab")} · cab ${keyLabel("cab")} · tag ${keyLabel("tag")} · check ${keyLabel("inspect")} · compact ${keyLabel("compact")} · clean ${keyLabel("cleanup")} · brace ${keyLabel("brace")}`,
       `Elapsed: ${Math.round(game.duration-game.time)}s / ${game.duration}s · score ${game.score} · complaints ${game.complaints}`,
       `First movement ${first("first_movement")} · cab exit ${first("cab_exited")} · inspection ${first("stop_inspected")} · resolution ${resolved[0]?`${resolved[0].at}s`:"—"}`,
       `Resolved ${TOTAL_STOPS-unresolved()}/${TOTAL_STOPS} · order: ${order}`,
@@ -631,7 +643,7 @@
       game.mode = "foot";
       t.speed = 0;
       recordEvent("cab_exited");
-      showMessage("On foot. Walk to a bin and press Space to inspect it.");
+      showMessage(`On foot. Walk to a bin and press ${keyLabel("work")} to inspect it.`);
       beep(260, .06, "square");
       return;
     }
@@ -659,7 +671,7 @@
       w.carryStress = 0;
       if (waste) {
         waste.state = "dropped";
-        const moving = keys.has("KeyW") || keys.has("KeyA") || keys.has("KeyS") || keys.has("KeyD") || keys.has("ArrowUp") || keys.has("ArrowDown") || keys.has("ArrowLeft") || keys.has("ArrowRight");
+        const moving = held("forward") || held("reverse") || held("left") || held("right");
         if (waste.fragile && moving) waste.integrity -= .62;
         recordEvent("waste_dropped", { wasteId: waste.id, hard: moving, integrity: Number(waste.integrity.toFixed(2)) });
         if (waste.integrity <= .45) ruptureWaste(waste);
@@ -680,7 +692,7 @@
     }
     const { stop, distance } = nearestStop(w);
     if (!stop || distance > 38) { showMessage("No serviceable bin within reach."); return; }
-    if (stop.state === "waiting") { showMessage("Inspect this stop with Space before moving its bin."); return; }
+    if (stop.state === "waiting") { showMessage(`Inspect this stop with ${keyLabel("work")} before moving its bin.`); return; }
     if (!["authorized", "empty"].includes(stop.state)) return;
     w.grabbedStop = stop.id;
     recordEvent("bin_grabbed", { stopId: stop.id, state: stop.state });
@@ -701,7 +713,7 @@
     }
     if (!w.grabbedStop) {
       const nearbyWaste = nearestWaste(w);
-      if (nearbyWaste.waste && nearbyWaste.distance <= 42) { showMessage("Press E to pick up this curbside item."); return; }
+      if (nearbyWaste.waste && nearbyWaste.distance <= 42) { showMessage(`Press ${keyLabel("grab")} to pick up this curbside item.`); return; }
       inspectStop(); return;
     }
     const stop = game.stops.find(s => s.id === w.grabbedStop);
@@ -751,11 +763,11 @@
     w.stumble = Math.max(0, w.stumble - dt);
     w.collisionCooldown = Math.max(0, w.collisionCooldown - dt);
     if (w.stumble > 0) return;
-    const dx = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
-    const dy = (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0) - (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0);
+    const dx = (held("right") ? 1 : 0) - (held("left") ? 1 : 0);
+    const dy = (held("reverse") ? 1 : 0) - (held("forward") ? 1 : 0);
     const length = Math.hypot(dx, dy) || 1;
     const carriedWaste = game.waste.find(item => item.id === w.grabbedWaste);
-    const braced = keys.has("ShiftLeft") || keys.has("ShiftRight");
+    const braced = held("brace");
     const speed = w.grabbedStop ? 62 : carriedWaste?.type === "bulk" ? (braced ? 34 : 46) : carriedWaste ? 60 : 82;
     if (dx || dy) {
       if(game.metrics.firstMovement===null){game.metrics.firstMovement=Number((game.duration-game.time).toFixed(2));recordEvent("first_movement",{mode:"foot"});}
@@ -871,10 +883,10 @@
       load.drift = (random() - .5) * 1.15 * (game.assists.handlingAssist ? .72 : 1);
       load.driftTimer = .55 + random() * .65;
     }
-    const control = (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0) - (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0);
+    const control = (held("right") ? 1 : 0) - (held("left") ? 1 : 0);
     load.balance += (load.drift + control * (game.assists.handlingAssist?1.95:1.75)) * dt;
     load.balance *= Math.pow(.985, dt * 60);
-    if (keys.has("Space")) {
+    if (held("work")) {
       const stability = Math.max(game.assists.handlingAssist ? .28 : .18, 1 - Math.abs(load.balance) * .72);
       load.progress = Math.min(1, load.progress + dt * .48 * (campaign.upgrades.hydraulicAssist?1.28:1) * stability);
     }
@@ -887,7 +899,7 @@
       load.drift *= -.35;
       game.shake = .32;
       recordEvent("bin_slipped", { stopId: load.stop.id, progress: Number(load.progress.toFixed(2)) });
-      showMessage("Bin slipped—counter the sway with A/D and keep holding Space.", 1.7);
+      showMessage(`Bin slipped—counter with ${keyLabel("left")}/${keyLabel("right")} and keep holding ${keyLabel("work")}.`, 1.7);
       beep(105, .16, "sawtooth");
     }
     if (load.progress >= 1) finishLoad();
@@ -898,10 +910,10 @@
     t.stun = Math.max(0, t.stun - dt);
     t.collisionCooldown = Math.max(0, t.collisionCooldown - dt);
     if (t.stun > 0) { t.speed *= Math.pow(.1, dt); return; }
-    const forward = keys.has("ArrowUp") || keys.has("KeyW");
-    const reverse = keys.has("ArrowDown") || keys.has("KeyS");
-    const left = keys.has("ArrowLeft") || keys.has("KeyA");
-    const right = keys.has("ArrowRight") || keys.has("KeyD");
+    const forward = held("forward");
+    const reverse = held("reverse");
+    const left = held("left");
+    const right = held("right");
     if((forward||reverse)&&game.metrics.firstMovement===null){game.metrics.firstMovement=Number((game.duration-game.time).toFixed(2));recordEvent("first_movement",{mode:"truck"});}
     if (forward) t.speed += 115 * (campaign.upgrades.winterTires?1.1:1) * dt;
     if (reverse) t.speed -= 92 * dt;
@@ -968,7 +980,7 @@
       vx: (Math.random() - .5) * 75, vy: (Math.random() - .5) * 75,
       life: 3 + Math.random() * 2, size: 3 + Math.random() * 5
     });
-    showMessage("Loose load spilled. Stop nearby and press X to deploy the cleanup kit.");
+    showMessage(`Loose load spilled. Stop nearby and press ${keyLabel("cleanup")} to deploy the cleanup kit.`);
   }
 
   function updateParticles(dt) {
@@ -1198,20 +1210,20 @@
 
   function contextualPrompt() {
     if (game.phase === "COMPACT") return "COMPACTOR CYCLING — HOLD";
-    if (game.phase === "LOAD") return "HOLD SPACE · A/D BALANCE THE BIN";
+    if (game.phase === "LOAD") return `HOLD ${keyLabel("work")} · ${keyLabel("left")}/${keyLabel("right")} BALANCE THE BIN`;
     if (game.phase !== "DRIVE") return "";
     const nearbySpill = nearestSpill();
-    if(game.mode==="truck") return Math.abs(game.truck.speed)>10?"BRAKE · F TO EXIT CAB":"F · EXIT CAB   C · COMPACT";
+    if(game.mode==="truck") return Math.abs(game.truck.speed)>10?`BRAKE · ${keyLabel("cab")} TO EXIT CAB`:`${keyLabel("cab")} · EXIT CAB   ${keyLabel("compact")} · COMPACT`;
     const w=game.worker;
-    if(nearbySpill.spill&&nearbySpill.distance<=48&&!w.grabbedStop&&!w.grabbedWaste)return"X · CLEAN SPILL";
-    if(w.grabbedWaste){const waste=game.waste.find(item=>item.id===w.grabbedWaste);const h=hopperPosition();if(waste&&Math.hypot(waste.x-h.x,waste.y-h.y)<=58)return"SPACE · LOAD ITEM";return waste?.type==="bulk"?"HOLD SHIFT · BRACE  /  TAKE WIDE TURNS":"CARRY BAG TO REAR HOPPER";}
-    if(w.grabbedStop){const stop=game.stops.find(s=>s.id===w.grabbedStop);if(stop?.state==="authorized"){const h=hopperPosition();return Math.hypot(stop.binX-h.x,stop.binY-h.y)<=48?"SPACE · LOAD HOPPER":"WHEEL BIN TO REAR HOPPER";}if(stop?.state==="empty")return Math.hypot(stop.binX-stop.x,stop.binY-stop.y)<=42?"SPACE · RETURN BIN":"WHEEL BIN TO AMBER MARKER";}
-    const nearbyWaste=nearestWaste(w);if(nearbyWaste.waste&&nearbyWaste.distance<=42)return`E · GRAB ${nearbyWaste.waste.label}`;
-    if(Math.hypot(w.x-game.truck.x,w.y-game.truck.y)<=60)return"F · ENTER CAB";
+    if(nearbySpill.spill&&nearbySpill.distance<=48&&!w.grabbedStop&&!w.grabbedWaste)return`${keyLabel("cleanup")} · CLEAN SPILL`;
+    if(w.grabbedWaste){const waste=game.waste.find(item=>item.id===w.grabbedWaste);const h=hopperPosition();if(waste&&Math.hypot(waste.x-h.x,waste.y-h.y)<=58)return`${keyLabel("work")} · LOAD ITEM`;return waste?.type==="bulk"?`HOLD ${keyLabel("brace")} · BRACE  /  TAKE WIDE TURNS`:"CARRY BAG TO REAR HOPPER";}
+    if(w.grabbedStop){const stop=game.stops.find(s=>s.id===w.grabbedStop);if(stop?.state==="authorized"){const h=hopperPosition();return Math.hypot(stop.binX-h.x,stop.binY-h.y)<=48?`${keyLabel("work")} · LOAD HOPPER`:"WHEEL BIN TO REAR HOPPER";}if(stop?.state==="empty")return Math.hypot(stop.binX-stop.x,stop.binY-stop.y)<=42?`${keyLabel("work")} · RETURN BIN`:"WHEEL BIN TO AMBER MARKER";}
+    const nearbyWaste=nearestWaste(w);if(nearbyWaste.waste&&nearbyWaste.distance<=42)return`${keyLabel("grab")} · GRAB ${nearbyWaste.waste.label}`;
+    if(Math.hypot(w.x-game.truck.x,w.y-game.truck.y)<=60)return`${keyLabel("cab")} · ENTER CAB`;
     const nearbyStop = nearestStop(w);
-    if(nearbyStop.stop&&nearbyStop.distance<=40)return nearbyStop.stop.state==="waiting"?`SPACE · INSPECT ${nearbyStop.stop.label.toUpperCase()}`:"E · GRAB BIN";
-    if (game.loose >= 3 && Math.abs(game.truck.speed) <= 18) return "C · COMPACT LOOSE LOAD";
-    return "WASD / ARROWS · WALK   E · GRAB/DROP";
+    if(nearbyStop.stop&&nearbyStop.distance<=40)return nearbyStop.stop.state==="waiting"?`${keyLabel("work")} · INSPECT ${nearbyStop.stop.label.toUpperCase()}`:`${keyLabel("grab")} · GRAB BIN`;
+    if (game.loose >= 3 && Math.abs(game.truck.speed) <= 18) return `${keyLabel("compact")} · COMPACT LOOSE LOAD`;
+    return `${keyLabel("forward")}/${keyLabel("left")}/${keyLabel("reverse")}/${keyLabel("right")} / ARROWS · WALK   ${keyLabel("grab")} · GRAB/DROP`;
   }
 
   function drawHUD() {
@@ -1237,7 +1249,7 @@
     ctx.fillStyle="#282d2e";ctx.fillRect(290,494,380,12);ctx.fillStyle=Math.abs(load.balance)>.78?"#b74534":"#7d8b4d";ctx.fillRect(478+load.balance*160,492,9,16);ctx.fillStyle="#e9a040";ctx.fillRect(480,494,3,12);
   }
 
-  function drawCarryMeter(){const stress=game.worker.carryStress;ctx.fillStyle="rgba(7,10,13,.92)";ctx.fillRect(354,136,252,29);ctx.strokeStyle="#514838";ctx.strokeRect(354,136,252,29);ctx.fillStyle="#282d2e";ctx.fillRect(365,148,230,7);ctx.fillStyle=stress>.75?"#b74534":"#7d8b4d";ctx.fillRect(365,148,230*stress,7);ctx.fillStyle="#d9d4c6";ctx.font="bold 8px Courier New";ctx.fillText("GRIP STRESS // SHIFT TO BRACE",365,145);}
+  function drawCarryMeter(){const stress=game.worker.carryStress;ctx.fillStyle="rgba(7,10,13,.92)";ctx.fillRect(354,136,252,29);ctx.strokeStyle="#514838";ctx.strokeRect(354,136,252,29);ctx.fillStyle="#282d2e";ctx.fillRect(365,148,230,7);ctx.fillStyle=stress>.75?"#b74534":"#7d8b4d";ctx.fillRect(365,148,230*stress,7);ctx.fillStyle="#d9d4c6";ctx.font="bold 8px Courier New";ctx.fillText(`GRIP STRESS // ${keyLabel("brace").toUpperCase()} TO BRACE`,365,145);}
 
   function drawRouteStrip(){
     const x=24,y=101,w=250,h=28;ctx.fillStyle="rgba(7,10,13,.9)";ctx.fillRect(x,y,w,h);ctx.strokeStyle="#4e493f";ctx.strokeRect(x,y,w,h);ctx.fillStyle="#262b2d";ctx.fillRect(x+12,y+18,w-24,2);
@@ -1280,24 +1292,59 @@
       game.phase = "PAUSED";
       keys.clear();
       ui.pause.classList.remove("hidden");
-      setStatus("Shift paused. Press P or Resume.");
+      setStatus(`Shift paused. Press ${keyLabel("pause")} or Resume.`);
     }
   }
 
+  function beginRebind(action) {
+    if (!Input.ACTIONS[action] || game.phase !== "READY") return;
+    rebindingAction = action;
+    renderBindings();
+    setStatus(`Press a new key for ${Input.ACTIONS[action].label}. Escape cancels.`);
+  }
+
+  function captureBinding(code) {
+    if (!rebindingAction) return false;
+    const action = rebindingAction;
+    if (code === "Escape") {
+      rebindingAction = null;
+      renderBindings();
+      setStatus("Keyboard binding unchanged.");
+      return true;
+    }
+    if (!Input.isBindable(code)) {
+      setStatus(`${Input.formatCode(code)} is reserved. Press another key or Escape.`);
+      return true;
+    }
+    const conflict = Input.conflictFor(action, code, campaign.settings.bindings);
+    if (conflict) {
+      setStatus(`${Input.formatCode(code)} is already used by ${Input.ACTIONS[conflict].label}. Press another key.`);
+      return true;
+    }
+    campaign.settings.bindings[action] = code;
+    rebindingAction = null;
+    saveCampaign();
+    renderBindings();
+    setStatus(`${Input.ACTIONS[action].label} is now ${Input.formatCode(code)}.`);
+    return true;
+  }
+
   addEventListener("keydown", event => {
-    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(event.code)) event.preventDefault();
+    if (rebindingAction) { event.preventDefault(); captureBinding(event.code); return; }
+    const action = Input.actionForCode(event.code, campaign.settings.bindings);
+    if (action || ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(event.code)) event.preventDefault();
     keys.add(event.code);
     if (event.repeat) return;
-    if (event.code === "Space") handleSpaceAction();
-    if (event.code === "KeyE") game.phase === "INSPECT" ? collectActive() : toggleGrab();
-    if (event.code === "KeyF") exitEnterTruck();
-    if (event.code === "KeyR") tagActive();
-    if (event.code === "KeyQ") inspectCloser();
-    if (event.code === "KeyC") compact();
-    if (event.code === "KeyX") cleanSpill();
-    if (event.code === "KeyP") togglePause();
+    if (action === "work") handleSpaceAction();
+    if (action === "grab") game.phase === "INSPECT" ? collectActive() : toggleGrab();
+    if (action === "cab") exitEnterTruck();
+    if (action === "tag") tagActive();
+    if (action === "inspect") inspectCloser();
+    if (action === "compact") compact();
+    if (action === "cleanup") cleanSpill();
+    if (action === "pause") togglePause();
     if (event.code === "Enter" && game.phase === "RESULT") resetGame();
-    if (event.code === "KeyM") toggleMute();
+    if (action === "mute") toggleMute();
   });
   addEventListener("keyup", event => keys.delete(event.code));
   addEventListener("blur", () => { keys.clear(); if (game && !["READY","RESULT","PAUSED"].includes(game.phase)) togglePause(true); });
@@ -1311,6 +1358,8 @@
   document.querySelector("#resumeButton").addEventListener("click", () => togglePause());
   document.querySelector("#restartButton").addEventListener("click", resetGame);
   ui.upgradeList.addEventListener("click",event=>{const button=event.target.closest("[data-upgrade]");if(button)buyUpgrade(button.dataset.upgrade);});
+  ui.bindingList.addEventListener("click",event=>{const button=event.target.closest("[data-bind-action]");if(button)beginRebind(button.dataset.bindAction);});
+  ui.resetBindings.addEventListener("click",()=>{rebindingAction=null;campaign.settings.bindings=Input.defaultBindings();saveCampaign();renderBindings();setStatus("Keyboard bindings reset to defaults.");});
   ui.resetCareer.addEventListener("click",()=>{if(!confirm("Reset all local crew history, credits, trust, upgrades, and settings?"))return;campaign=defaultCampaign();try{localStorage.removeItem(SAVE_KEY);}catch(_){}applyCampaignSettings();resetGame();syncAudioMix();});
   function toggleMute() { muted=!muted;if(!muted)ensureAudio();syncAudioMix();ui.mute.textContent=`Sound: ${muted?"off":"on"}`;ui.mute.setAttribute("aria-pressed", String(muted));if(audio)ui.audioStatus.textContent=muted?"Muted // mix preserved":"Active // 3 buses"; }
   ui.mute.addEventListener("click", toggleMute);

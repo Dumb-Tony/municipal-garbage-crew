@@ -20,9 +20,9 @@ Drive and walk with **WASD** or **arrow keys**. Stop near a curb and press **F**
 
 ## Current slice
 
-Version `0.13.0` strengthens solo-validation evidence. End-of-shift reports now include average frame rate, worst frame, slow-frame count, viewport, pixel ratio, and first movement whether the player starts in the truck or on foot. Scoring, earnings, trust, address outcomes, and legal stop-state transitions share the tested pure rules module introduced in 0.12. Persistent assists remain available for external sessions. The game remains browser-first; Unity is not part of the plan.
+Version `0.14.0` adds a persistent remappable keyboard action layer. Every driving, walking, work, contamination, compactor, cleanup, pause, mute, and brace input can be rebound at the depot; conflicts and unsafe browser keys are rejected, movement arrows and right Shift remain reliable fallbacks, and all prompts plus the canvas accessibility description follow the chosen layout. Playtest reports record the active bindings alongside assists and performance evidence. The game remains browser-first; Unity is not part of the plan.
 
-Run `npm test` to verify the scoring ceiling, ledger arithmetic, campaign bounds, address history, and stop-state graph. No install or build step is required.
+Run `npm test` to verify input mapping, remap safety, scoring, campaign bounds, address history, and stop-state invariants. No install or build step is required.
 
 ## Repository and publishing policy
 

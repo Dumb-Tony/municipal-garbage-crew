@@ -10,7 +10,7 @@
   <meta property="og:image" content="https://dumb-tony.github.io/municipal-garbage-crew/prototype/assets/bellwether-noir-title-v2.png">
   <meta name="twitter:card" content="summary_large_image">
   <title>Municipal Garbage Crew — First Route</title>
-  <link rel="stylesheet" href="styles.css?v=0.13.0">
+  <link rel="stylesheet" href="styles.css?v=0.14.0">
 </head>
 <body>
   <main class="shell">
@@ -37,6 +37,12 @@
             <label><input id="reducedShake" type="checkbox"> Reduced shake</label>
             <label><input id="highContrast" type="checkbox"> High contrast</label>
           </fieldset>
+          <details class="control-bindings">
+            <summary>Keyboard bindings</summary>
+            <p>Choose an action, then press a new key. Arrow keys remain movement fallbacks.</p>
+            <div id="bindingList" class="binding-list"></div>
+            <button id="resetBindingsButton" type="button">Reset keyboard bindings</button>
+          </details>
           <h3>Garage upgrades</h3>
           <div id="upgradeList" class="upgrade-list"></div>
           <details class="address-book">
@@ -48,7 +54,7 @@
         <p class="stamp">ROUTE 04 · MAPLE DISTRICT</p>
         <h2>Three blocks.<br>Ten stops.<br>One working compactor.</h2>
         <p class="briefing">The complaints started before dawn. Work Maple in any order, watch cross traffic and blocked curbs, manage the hopper, and do not give the mayor another reason to call.</p>
-        <div class="control-grid" aria-label="Controls">
+        <div id="controlSummary" class="control-grid" aria-label="Controls">
           <span><b>WASD / Arrows</b> Drive / walk</span>
           <span><b>F</b> Exit / enter truck</span>
           <span><b>Space</b> Inspect / load / return</span>
@@ -91,7 +97,7 @@
     </section>
 
     <footer class="footer-note">
-      <span>BUILD 0.13.0 // SOLO EVIDENCE</span>
+      <span>BUILD 0.14.0 // KEYBOARD SHOP</span>
       <span id="statusText" aria-live="polite">Click “Clock in” to begin.</span>
       <div class="footer-actions">
         <details class="audio-mixer">
@@ -109,7 +115,8 @@
       </div>
     </footer>
   </main>
-  <script src="rules.js?v=0.13.0" defer></script>
-  <script src="game.js?v=0.13.0" defer></script>
+  <script src="rules.js?v=0.14.0" defer></script>
+  <script src="input.js?v=0.14.0" defer></script>
+  <script src="game.js?v=0.14.0" defer></script>
 </body>
 </html>
