@@ -641,7 +641,7 @@
     const averageFrame=game.metrics.frameCount?game.metrics.totalFrameMs/game.metrics.frameCount:0;
     const averageFps=averageFrame?Math.round(1000/averageFrame):0;
     const lines=[
-      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.18.0",
+      "MUNICIPAL GARBAGE CREW // PLAYTEST REPORT // BUILD 0.19.0",
       `Shift ${campaign.shifts} · ${game.contract.name} · pay ×${game.contract.payoutMultiplier.toFixed(2)} · seed ${game.seed} · ${timedOut?"clock expired":unresolved()?"ended early":"route complete"}`,
       `Assists: ${activeAssistNames().join(", ")||"none"}`,
       `Bindings: move ${["forward","left","reverse","right"].map(keyLabel).join("/")} · work ${keyLabel("work")} · grab ${keyLabel("grab")} · cab ${keyLabel("cab")} · tag ${keyLabel("tag")} · check ${keyLabel("inspect")} · compact ${keyLabel("compact")} · clean ${keyLabel("cleanup")} · brace ${keyLabel("brace")}`,

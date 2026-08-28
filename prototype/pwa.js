@@ -6,7 +6,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function createMunicipalGarbageAppShell() {
   "use strict";
 
-  const BUILD_VERSION = "0.18.0";
+  const BUILD_VERSION = "0.19.0";
   const CACHE_PREFIX = "municipal-garbage-crew-";
   const CACHE_NAME = `${CACHE_PREFIX}${BUILD_VERSION}`;
   const SHELL_ASSETS = Object.freeze([

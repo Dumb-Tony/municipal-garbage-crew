@@ -97,6 +97,7 @@ Only after M5 passes: two players, driver/loader handoff, safe-move call, shared
 - A clean route with correct contamination calls is achievable with at least 20 seconds remaining after one practice run.
 - The player encounters capacity pressure but can finish without a forced bad load.
 - Screen remains legible at 960×600 internal resolution and at 680 CSS pixels wide.
+- At 1280×720 and other 700–935px-tall desktop viewports, the full game frame and footer fit without page scrolling; the depot, controls, start action, HUD, dialogs, and results remain unclipped.
 - Decision actions work by key and clickable button; sound can be muted; reduced-motion preference removes overlay rotation.
 - Relaxed clock adds two minutes without increasing the time-bonus ceiling; handling assist and light traffic reduce difficulty without removing hazards.
 - Reduced shake and high contrast apply visibly, persist across reloads, and do not change the route score.
@@ -320,13 +321,13 @@ Module boundaries should separate pure simulation, Canvas presentation, networki
 - [ ] Keyboard-only navigation and visible focus.
 - [ ] Screen reader announces start/decision/results controls; canvas has an equivalent concise label.
 
-### Playtest telemetry (generated in 0.18.0)
+### Playtest telemetry (generated in 0.19.0)
 
 The results screen generates a copyable report containing contract and payout modifier, shift seed, active assists, active primary bindings, elapsed time, first movement from either control mode, cab-exit/inspection/resolution times, resolution order, compactions, collisions, handling slips, caused/assigned/cleaned spills, stumbles, damage, score, complaints, credits, trust, installed upgrades, average frame rate, worst frame, slow-frame count, fixed simulation-step count, discarded stall time, viewport, and display pixel ratio. The observer still records confusion, voluntary retry, contract clarity, audio clarity/fatigue, and the player's causal account because runtime telemetry cannot infer those judgments.
 
 ## Explicit next implementation tasks
 
-1. Run at least five fresh external solo sessions on build 0.18.0, collecting the generated report plus observer notes; use Maple Regular for the comparable first run and allow voluntary contract selection on retries.
+1. Run at least five fresh external solo sessions on build 0.19.0, collecting the generated report plus observer notes; use Maple Regular for the comparable first run and allow voluntary contract selection on retries.
 2. Tune clarity, pacing, economy, accessibility, and audio fatigue from that evidence, then repeat any failed M5 exit checks.
 3. Build a narrowly scoped two-player driver/loader test only after the solo exit gate, then record a multiplayer go/no-go decision.
 4. Alongside these milestones, extract event reducers and named input actions and add rule tests for cargo, persistence migrations, and stop-state invariants.

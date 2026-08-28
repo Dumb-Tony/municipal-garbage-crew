@@ -138,6 +138,26 @@ kbd { font-family: inherit; border: 1px solid currentColor; padding: 1px 5px; }
 body.high-contrast canvas { filter: saturate(1.02) contrast(1.28) brightness(1.05); }
 body.high-contrast .game-frame { border-color: #d49a4d; }
 
+@media (min-width: 781px) and (min-height: 700px) and (max-height: 935px) {
+  .shell { width: min(1240px, 100%, calc(160vh - 258px)); }
+  .footer-note { gap: 10px; }
+  .footer-note > span:first-child { display: none; }
+}
+
+@media (min-width: 781px) and (min-height: 700px) and (max-height: 820px) {
+  .shell { width: min(1240px, 100%, calc(160vh - 202px)); padding-top: 10px; padding-bottom: 10px; }
+  .masthead { margin-bottom: 8px; padding: 3px 4px 7px; }
+  .masthead h1 { font-size: clamp(2rem, 6vh, 3rem); }
+  #startPanel { padding: 24px; column-gap: 26px; }
+  #startPanel .depot-panel { max-height: min(480px, calc(100vh - 225px)); padding: 12px; }
+  #startPanel .stamp { margin-bottom: 6px; }
+  #startPanel h2 { margin-bottom: 9px; font-size: clamp(2rem, 6vh, 2.8rem); }
+  #startPanel .briefing { display: none; }
+  #startPanel .control-grid { gap: 4px; margin: 8px 0 10px; }
+  #startPanel .control-grid span { padding: 6px 8px; font-size: .66rem; }
+  #startButton { padding: 10px 14px; }
+}
+
 @media (max-width: 780px) {
   .shell { padding: 10px; }
   .masthead { align-items: center; }

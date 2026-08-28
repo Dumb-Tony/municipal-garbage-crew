@@ -1,7 +1,7 @@
 # Municipal Garbage Crew — Living Game Design Document
 
-**Status:** Active preproduction / browser slice 0.18.0
-**Last updated:** 2026-08-27
+**Status:** Active preproduction / browser slice 0.19.0
+**Last updated:** 2026-08-28
 **Product direction:** browser-first stylized game; solo now, cooperative expansion evaluated after the core route is proven
 **Current proof:** standalone 2D Canvas prototype, solo, no build step
 
@@ -216,7 +216,7 @@ Scoring has independent service, safety, cleanliness, compliance, and time dimen
 
 Test whether one route creates meaningful tension between safe handling, contamination judgment, capacity, positioning, and time—and whether mistakes remain legible and funny enough to invite a retry.
 
-### Included through 0.18.0
+### Included through 0.19.0
 
 - Three-screen, camera-tracked Maple District route with ten stops distributed across West Maple, Maple Crossing, and East Maple.
 - Stops may be serviced in any order; the route strip shows district position and every unresolved/resolved stop without forcing a waypoint sequence.
@@ -253,6 +253,7 @@ Test whether one route creates meaningful tension between safe handling, contami
 - Three persistent solo contracts reuse Maple District without becoming palette swaps: Maple Regular is the evaluation baseline; Bulk Amnesty adds two distinct required oversized objects, 8% heavier bins, slower traffic, ninety score-neutral seconds, and a 1.20 payout multiplier; After-Storm Sweep adds three assigned cleanup zones, slower traffic, sixty score-neutral seconds, and a 1.15 payout multiplier. Contract identity appears in briefing, results, last-shift history, and reports.
 - The served build is an installable, offline-capable PWA with a scoped manifest, original Bellwether SVG badge, versioned network-first service worker, complete route shell cache, visible readiness state, and install action when the browser exposes one. Direct-file play remains a non-installable fallback and never attempts service-worker registration.
 - The depot and recovery flow are keyboard-safe: Enter begins the selected route, while End Shift freezes simulation and opens a consequence preview listing missed stops, dirty-street complaints, and the resulting total. Keep Working receives safe default focus, Escape cancels, and only an explicit second action files the shift; all three outcomes enter the playtest ledger.
+- Low-height desktop viewports between 700 and 935 CSS pixels scale the shell around the unchanged 960×600 simulation canvas, keeping the complete playfield and footer visible without scrolling. At the shortest supported desktop height, the depot uses a compact briefing composition while preserving contract selection, assists, controls, and the start action.
 - Deterministic shift seed, deterministic spill checks, and a structured event ledger covering route decisions and consequences.
 - Corrected front-facing truck silhouette with cab, windshield, headlights, and explicit forward marker.
 - Safe road-aligned spawn, road-only movement bounds, and lane-sensitive collision envelopes verified against the initial traffic positions.
@@ -272,7 +273,7 @@ The current implementation is intentionally one script for frictionless delivery
 
 ### Data and state architecture
 
-The authoritative shift state contains phase, contract, control mode, worker and truck state, horizontal camera position, route clock and selected assist profile, score ledger, cargo, stop/bin positions and states, loose-waste position/type/integrity/stress state, assigned and caused spills, traffic axes, static access obstacles, deterministic seed/RNG state, a structured event ledger, fixed-step/performance counters, transient effects, and outcome counters. Stops progress through `waiting → authorized → loading → empty → awaiting-waste → collected`, with `tagged` as the alternate terminal state; loose waste progresses independently through `waiting → ready → carried/dropped → loaded`, with a recoverable `ruptured` branch. Audio reads authoritative state but never mutates simulation: continuous node parameters follow phase, mode, speed and proximity, while event cues use category buses. The 0.18.0 prototype routes final score, campaign consequences, early-closure previews, history updates, and stop invariants through a shared tested rules module, builds route variants from immutable contract definitions, translates keyboard codes through named actions, advances authoritative state at fixed 60 Hz, emits comparable runtime-performance evidence, and packages the same source as a versioned offline shell; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
+The authoritative shift state contains phase, contract, control mode, worker and truck state, horizontal camera position, route clock and selected assist profile, score ledger, cargo, stop/bin positions and states, loose-waste position/type/integrity/stress state, assigned and caused spills, traffic axes, static access obstacles, deterministic seed/RNG state, a structured event ledger, fixed-step/performance counters, transient effects, and outcome counters. Stops progress through `waiting → authorized → loading → empty → awaiting-waste → collected`, with `tagged` as the alternate terminal state; loose waste progresses independently through `waiting → ready → carried/dropped → loaded`, with a recoverable `ruptured` branch. Audio reads authoritative state but never mutates simulation: continuous node parameters follow phase, mode, speed and proximity, while event cues use category buses. The 0.19.0 prototype routes final score, campaign consequences, early-closure previews, history updates, and stop invariants through a shared tested rules module, builds route variants from immutable contract definitions, translates keyboard codes through named actions, advances authoritative state at fixed 60 Hz, emits comparable runtime-performance evidence, and packages the same source as a versioned offline shell; remaining live score mutations should move behind named commands/events so replays, networking, analytics, and tests can observe the same decisions.
 
 Long-term persistence layers:
 

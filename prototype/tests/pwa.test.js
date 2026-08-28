@@ -5,13 +5,13 @@ const assert = require("node:assert/strict");
 const shell = require("../pwa.js");
 
 test("app shell cache is versioned with the build", () => {
-  assert.equal(shell.BUILD_VERSION, "0.18.0");
-  assert.equal(shell.CACHE_NAME, "municipal-garbage-crew-0.18.0");
+  assert.equal(shell.BUILD_VERSION, "0.19.0");
+  assert.equal(shell.CACHE_NAME, "municipal-garbage-crew-0.19.0");
 });
 
 test("offline shell includes every executable runtime module", () => {
   for (const asset of ["styles.css", "rules.js", "input.js", "timing.js", "contracts.js", "game.js", "pwa.js"]) {
-    assert.equal(shell.SHELL_ASSETS.some(path => path.includes(`${asset}?v=0.18.0`)), true, asset);
+    assert.equal(shell.SHELL_ASSETS.some(path => path.includes(`${asset}?v=0.19.0`)), true, asset);
   }
 });
 
